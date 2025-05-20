@@ -86,4 +86,19 @@ public interface UserDAO {
      * @throws SQLException if there is an error accessing the database
      */
     boolean deactivateUser(int userId) throws SQLException;
+
+    /**
+     * Update a user's last login timestamp
+     * @param userId the ID of the user to update
+     * @throws SQLException if there is an error accessing the database
+     */
+    void updateLastLogin(int userId) throws SQLException;
+
+    User findById(int id) throws SQLException;
+
+    List<User> findAll() throws SQLException;
+
+    void delete(int id) throws SQLException;
+
+    User getUserByEmail(String email) throws SQLException;
 }

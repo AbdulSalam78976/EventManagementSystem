@@ -146,7 +146,7 @@ public class ParticipantsPanel extends JPanel {
                         reg.getId(),
                         reg.getAttendee().getName(),
                         reg.getAttendee().getEmail(),
-                        event.getName(),
+                        event.getTitle(),
                         dateFormat.format(reg.getRegistrationDate()),
                         reg.getStatus(),
                         "Actions"
@@ -189,13 +189,13 @@ public class ParticipantsPanel extends JPanel {
                     if (searchText.isEmpty() ||
                         reg.getAttendee().getName().toLowerCase().contains(searchText.toLowerCase()) ||
                         reg.getAttendee().getEmail().toLowerCase().contains(searchText.toLowerCase()) ||
-                        event.getName().toLowerCase().contains(searchText.toLowerCase())) {
+                        event.getTitle().toLowerCase().contains(searchText.toLowerCase())) {
                         
                         Object[] row = {
                             reg.getId(),
                             reg.getAttendee().getName(),
                             reg.getAttendee().getEmail(),
-                            event.getName(),
+                            event.getTitle(),
                             dateFormat.format(reg.getRegistrationDate()),
                             reg.getStatus(),
                             "Actions"
@@ -236,13 +236,18 @@ public class ParticipantsPanel extends JPanel {
                         renderer.setForeground(AppColors.ACCENT_YELLOW);
                         break;
                     case APPROVED:
+                    case REGISTERED:
                         renderer.setForeground(AppColors.ACCENT_GREEN);
                         break;
                     case REJECTED:
                         renderer.setForeground(AppColors.ACCENT_RED);
                         break;
                     case CANCELLED:
+                    case NO_SHOW:
                         renderer.setForeground(AppColors.TEXT_SECONDARY);
+                        break;
+                    case ATTENDED:
+                        renderer.setForeground(AppColors.PRIMARY);
                         break;
                     default:
                         renderer.setForeground(AppColors.TEXT_PRIMARY);
@@ -283,12 +288,16 @@ public class ParticipantsPanel extends JPanel {
             
             Registration.Status status = (Registration.Status) table.getValueAt(row, 5);
             
+            // Show buttons based on current status
             approveButton.setVisible(status == Registration.Status.PENDING);
-            rejectButton.setVisible(status == Registration.Status.REJECTED);
-            cancelButton.setVisible(status == Registration.Status.CANCELLED);
+            rejectButton.setVisible(status == Registration.Status.PENDING);
+            cancelButton.setVisible(status == Registration.Status.APPROVED || 
+                                  status == Registration.Status.REGISTERED);
             
             if (isSelected) {
-                // Optional: change background for selected row
+                setBackground(table.getSelectionBackground());
+            } else {
+                setBackground(table.getBackground());
             }
             
             return this;
@@ -305,6 +314,7 @@ public class ParticipantsPanel extends JPanel {
         private final JButton cancelButton;
         private int clickedRow;
         private JTable table;
+        private String clickedButton;
 
         public ButtonEditor(JTable table) {
             super(new JCheckBox()); // Pass a dummy checkbox
@@ -316,9 +326,18 @@ public class ParticipantsPanel extends JPanel {
             rejectButton = UIUtils.createButton("Reject", null, UIUtils.ButtonType.ERROR, UIUtils.ButtonSize.SMALL);
             cancelButton = UIUtils.createButton("Cancel", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
 
-            approveButton.addActionListener(e -> fireEditingStopped());
-            rejectButton.addActionListener(e -> fireEditingStopped());
-            cancelButton.addActionListener(e -> fireEditingStopped());
+            approveButton.addActionListener(e -> {
+                clickedButton = "APPROVE";
+                fireEditingStopped();
+            });
+            rejectButton.addActionListener(e -> {
+                clickedButton = "REJECT";
+                fireEditingStopped();
+            });
+            cancelButton.addActionListener(e -> {
+                clickedButton = "CANCEL";
+                fireEditingStopped();
+            });
 
             panel.add(approveButton);
             panel.add(rejectButton);
@@ -335,12 +354,16 @@ public class ParticipantsPanel extends JPanel {
             clickedRow = row;
             Registration.Status status = (Registration.Status) table.getValueAt(row, 5);
             
+            // Show buttons based on current status
             approveButton.setVisible(status == Registration.Status.PENDING);
-            rejectButton.setVisible(status == Registration.Status.REJECTED);
-            cancelButton.setVisible(status == Registration.Status.CANCELLED);
+            rejectButton.setVisible(status == Registration.Status.PENDING);
+            cancelButton.setVisible(status == Registration.Status.APPROVED || 
+                                  status == Registration.Status.REGISTERED);
             
             if (isSelected) {
-                // Optional: change background for selected row
+                panel.setBackground(table.getSelectionBackground());
+            } else {
+                panel.setBackground(table.getBackground());
             }
             
             return panel;
@@ -348,44 +371,31 @@ public class ParticipantsPanel extends JPanel {
 
         @Override
         public Object getCellEditorValue() {
-            // Handle button click actions here based on which button was clicked
-            // This part needs more logic to determine which button was pressed
-            // For now, just stopping editing
-            System.out.println("Action button clicked on row: " + clickedRow);
-
-            // You would typically add logic here to get the Registration ID from clickedRow
-            // and call the appropriate controller method (approve/reject/cancel registration)
-
-            // Example (assuming Registration ID is in the first hidden column):
-            // int registrationId = (Integer) table.getModel().getValueAt(clickedRow, 0);
-            // try {
-            //     if (/* approve button was clicked */) {
-            //         registrationController.approveRegistration(registrationId);
-            //     } else if (/* reject button was clicked */) {
-            //         registrationController.rejectRegistration(registrationId);
-            //     } else if (/* cancel button was clicked */) {
-            //         registrationController.cancelRegistration(registrationId);
-            //     }
-            //     // Refresh participants table
-            //     ((ParticipantsPanel) SwingUtilities.getAncestorOfClass(ParticipantsPanel.class, table)).refreshParticipants();
-            // } catch (SQLException e) {
-            //      JOptionPane.showMessageDialog(table,
-            //          "Error updating registration: " + e.getMessage(),
-            //          "Database Error",
-            //          JOptionPane.ERROR_MESSAGE);
-            // }
-
-            return "Actions"; // Return a dummy value
-        }
-
-        @Override
-        public boolean stopCellEditing() {
-            return super.stopCellEditing();
-        }
-
-        @Override
-        public void cancelCellEditing() {
-            super.cancelCellEditing();
+            if (clickedButton != null) {
+                int registrationId = (Integer) table.getModel().getValueAt(clickedRow, 0);
+                try {
+                    switch (clickedButton) {
+                        case "APPROVE":
+                            registrationController.updateRegistrationStatus(registrationId, Registration.Status.APPROVED);
+                            break;
+                        case "REJECT":
+                            registrationController.updateRegistrationStatus(registrationId, Registration.Status.REJECTED);
+                            break;
+                        case "CANCEL":
+                            registrationController.cancelRegistration(registrationId);
+                            break;
+                    }
+                    // Refresh the table
+                    refreshParticipants();
+                } catch (SQLException e) {
+                    JOptionPane.showMessageDialog(table,
+                        "Error updating registration: " + e.getMessage(),
+                        "Database Error",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+            clickedButton = null;
+            return "Actions";
         }
     }
 } 

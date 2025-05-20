@@ -119,7 +119,7 @@ public class Feedback {
         return "Feedback{" +
                 "id=" + id +
                 ", user=" + getUserName() +
-                ", event=" + event.getName() +
+                ", event=" + event.getTitle() +
                 ", rating=" + rating +
                 ", submittedAt=" + submittedAt +
                 '}';

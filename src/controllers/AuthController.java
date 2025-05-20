@@ -64,9 +64,21 @@ public class AuthController {
         }
 
         // Use verifyPassword to compare the input password with the stored hash
-        if (!SecurityUtils.verifyPassword(password, user.getPassword())) {
+        SecurityUtils.VerificationResult verificationResult = SecurityUtils.verifyPassword(password, user.getPassword());
+        
+        if (!verificationResult.isSuccess()) {
             return new LoginResult(false, "Invalid password", null);
         }
+
+        // If password verification succeeded but needs migration, update the hash
+        if (verificationResult.needsMigration()) {
+            user.setPassword(verificationResult.getNewHash());
+            userDAO.update(user);
+        }
+
+        // Update last login timestamp
+        userDAO.updateLastLogin(user.getId());
+        user.setLastLoginAt(new Date());
 
         sessionManager.startSession(user);
         return new LoginResult(true, "Login successful", user);

@@ -56,37 +56,69 @@ public class AdminUserManagementScreen extends JFrame {
     }
 
     private JPanel createUserListPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = UIUtils.createPanel(new BorderLayout(20, 20), true);
+        panel.setBackground(AppColors.BACKGROUND_LIGHT);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Top panel for search and filters
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // Title and subtitle
+        JPanel headerPanel = UIUtils.createPanel(new BorderLayout(), false);
+        headerPanel.setOpaque(false);
+        
+        JLabel titleLabel = UIUtils.createLabel("Users Management", UIConstants.TITLE_FONT, AppColors.TEXT_PRIMARY);
+        JLabel subtitleLabel = UIUtils.createLabel("Manage all system users", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
+        
+        headerPanel.add(titleLabel, BorderLayout.NORTH);
+        headerPanel.add(subtitleLabel, BorderLayout.SOUTH);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        
+        // Main panel with search, filters, and table
+        JPanel mainContent = UIUtils.createPanel(new BorderLayout(0, 15), false);
+        mainContent.setOpaque(false);
+
+        // Search and filters panel
+        RoundedPanel filtersPanel = new RoundedPanel(new FlowLayout(FlowLayout.LEFT, 15, 10), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+        filtersPanel.setBorder(UIUtils.createRoundedBorder(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1));
         
         // Search field
-        searchField = new JTextField(20);
+        searchField = UIUtils.createRoundedTextField();
+        searchField.setPreferredSize(new Dimension(200, 30));
         searchField.putClientProperty("JTextField.placeholderText", "Search users...");
         searchField.addKeyListener(new KeyAdapter() {
             public void keyReleased(KeyEvent e) {
                 filterUsers();
             }
         });
-        topPanel.add(new JLabel("Search:"));
-        topPanel.add(searchField);
+        
+        JLabel searchLabel = UIUtils.createLabel("Search:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
+        filtersPanel.add(searchLabel);
+        filtersPanel.add(searchField);
 
         // Role filter
-        roleFilter = new JComboBox<>(new String[]{"All Roles", "Admin", "Organizer", "Attendee"});
+        roleFilter = UIUtils.createRoundedComboBox(new String[]{"All Roles", "Admin", "Organizer", "Attendee"});
+        roleFilter.setPreferredSize(new Dimension(150, 30));
         roleFilter.addActionListener(e -> filterUsers());
-        topPanel.add(new JLabel("Role:"));
-        topPanel.add(roleFilter);
+        
+        JLabel roleLabel = UIUtils.createLabel("Role:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
+        filtersPanel.add(roleLabel);
+        filtersPanel.add(roleFilter);
 
         // Status filter
-        statusFilter = new JComboBox<>(new String[]{"All Status", "Active", "Inactive"});
+        statusFilter = UIUtils.createRoundedComboBox(new String[]{"All Status", "Active", "Inactive"});
+        statusFilter.setPreferredSize(new Dimension(150, 30));
         statusFilter.addActionListener(e -> filterUsers());
-        topPanel.add(new JLabel("Status:"));
-        topPanel.add(statusFilter);
+        
+        JLabel statusLabel = UIUtils.createLabel("Status:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
+        filtersPanel.add(statusLabel);
+        filtersPanel.add(statusFilter);
+        
+        mainContent.add(filtersPanel, BorderLayout.NORTH);
 
-        panel.add(topPanel, BorderLayout.NORTH);
-
+        // Table Panel
+        RoundedPanel tablePanel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+        tablePanel.setBorder(UIUtils.createRoundedBorder(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1));
+        
         // Table
         String[] columns = {"ID", "Name", "Email", "Role", "Status", "Registration Date", "Actions"};
         tableModel = new DefaultTableModel(columns, 0) {
@@ -97,11 +129,23 @@ public class AdminUserManagementScreen extends JFrame {
         };
         userTable = new JTable(tableModel);
         userTable.setRowHeight(40);
+        userTable.setFont(UIConstants.BODY_FONT);
+        userTable.getTableHeader().setFont(UIConstants.SMALL_FONT_BOLD);
+        userTable.getTableHeader().setBackground(AppColors.BACKGROUND_LIGHT);
+        userTable.getTableHeader().setForeground(AppColors.TEXT_SECONDARY);
+        userTable.setSelectionBackground(AppColors.PRIMARY_LIGHT);
+        userTable.setSelectionForeground(AppColors.TEXT_PRIMARY);
+        userTable.setGridColor(AppColors.BORDER_LIGHT);
+        
         userTable.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
         userTable.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox()));
 
         JScrollPane scrollPane = new JScrollPane(userTable);
-        panel.add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        tablePanel.add(scrollPane, BorderLayout.CENTER);
+        
+        mainContent.add(tablePanel, BorderLayout.CENTER);
+        panel.add(mainContent, BorderLayout.CENTER);
 
         // Back button
         JButton backButton = UIUtils.createButton("Back to Dashboard", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
@@ -110,87 +154,133 @@ public class AdminUserManagementScreen extends JFrame {
             try {
                 new AdminDashboardNew().setVisible(true);
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Error opening dashboard: " + ex.getMessage());
+                UIUtils.showError(this, "Error opening dashboard: " + ex.getMessage());
             }
         });
-        panel.add(backButton, BorderLayout.SOUTH);
+        
+        JPanel buttonPanel = UIUtils.createPanel(new FlowLayout(FlowLayout.RIGHT), false);
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(backButton);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+        
+        panel.add(buttonPanel, BorderLayout.SOUTH);
 
         return panel;
     }
 
     private JPanel createEditUserPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = UIUtils.createPanel(new BorderLayout(20, 20), true);
+        panel.setBackground(AppColors.BACKGROUND_LIGHT);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        // Header
+        JPanel headerPanel = UIUtils.createPanel(new BorderLayout(), false);
+        headerPanel.setOpaque(false);
+        
+        JLabel titleLabel = UIUtils.createLabel("Edit User", UIConstants.TITLE_FONT, AppColors.TEXT_PRIMARY);
+        JLabel subtitleLabel = UIUtils.createLabel("Update user information", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
+        
+        headerPanel.add(titleLabel, BorderLayout.NORTH);
+        headerPanel.add(subtitleLabel, BorderLayout.SOUTH);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+
+        // Form in a rounded panel
+        RoundedPanel formContainer = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+        formContainer.setBorder(UIUtils.createRoundedBorderWithPadding(
+            AppColors.BORDER, 
+            UIConstants.CORNER_RADIUS_MEDIUM, 
+            1, 
+            UIConstants.PADDING_LARGE
+        ));
+        
         // Form panel
         JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(10, 10, 10, 10);
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Name field
-        formPanel.add(new JLabel("Name:"), gbc);
+        formPanel.add(UIUtils.createLabel("Name:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
         gbc.gridx = 1;
-        JTextField nameField = new JTextField(20);
+        gbc.weightx = 1.0;
+        JTextField nameField = UIUtils.createRoundedTextField();
         formPanel.add(nameField, gbc);
 
         // Email field
         gbc.gridx = 0;
         gbc.gridy = 1;
-        formPanel.add(new JLabel("Email:"), gbc);
+        gbc.weightx = 0;
+        formPanel.add(UIUtils.createLabel("Email:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
         gbc.gridx = 1;
-        JTextField emailField = new JTextField(20);
+        gbc.weightx = 1.0;
+        JTextField emailField = UIUtils.createRoundedTextField();
         formPanel.add(emailField, gbc);
 
         // Role field
         gbc.gridx = 0;
         gbc.gridy = 2;
-        formPanel.add(new JLabel("Role:"), gbc);
+        gbc.weightx = 0;
+        formPanel.add(UIUtils.createLabel("Role:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
         gbc.gridx = 1;
-        JComboBox<String> roleCombo = new JComboBox<>(new String[]{"Admin", "Organizer", "Attendee"});
+        gbc.weightx = 1.0;
+        JComboBox<String> roleCombo = UIUtils.createRoundedComboBox(new String[]{"Admin", "Organizer", "Attendee"});
         formPanel.add(roleCombo, gbc);
 
         // Status field
         gbc.gridx = 0;
         gbc.gridy = 3;
-        formPanel.add(new JLabel("Status:"), gbc);
+        gbc.weightx = 0;
+        formPanel.add(UIUtils.createLabel("Status:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
         gbc.gridx = 1;
-        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Active", "Inactive"});
+        gbc.weightx = 1.0;
+        JComboBox<String> statusCombo = UIUtils.createRoundedComboBox(new String[]{"Active", "Inactive"});
         formPanel.add(statusCombo, gbc);
 
         // Reset password button
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.gridwidth = 2;
+        gbc.weightx = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(20, 10, 10, 10);
+        
         JButton resetPasswordButton = UIUtils.createButton("Reset Password", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
         resetPasswordButton.addActionListener(e -> {
             String newPassword = generateTemporaryPassword();
             try {
                 AuthController.ResetResult result = authController.resetPassword(emailField.getText(), newPassword);
                 if (result.isSuccess()) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Password reset successful. New temporary password: " + newPassword,
-                        "Password Reset",
-                        JOptionPane.INFORMATION_MESSAGE);
+                    UIUtils.showSuccess(this, "Password reset successful. New temporary password: " + newPassword);
                 } else {
-                    JOptionPane.showMessageDialog(this,
-                        "Failed to reset password: " + result.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                    UIUtils.showError(this, "Failed to reset password: " + result.getMessage());
                 }
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Error resetting password: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                UIUtils.showError(this, "Error resetting password: " + ex.getMessage());
             }
         });
         formPanel.add(resetPasswordButton, gbc);
+        
+        formContainer.add(formPanel, BorderLayout.CENTER);
+        panel.add(formContainer, BorderLayout.CENTER);
 
+        // Bottom button panel
+        JPanel buttonPanel = UIUtils.createPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0), false);
+        buttonPanel.setOpaque(false);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
+
+        // Back button
+        JButton cancelButton = UIUtils.createButton("Cancel", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
+        cancelButton.addActionListener(e -> cardLayout.show(mainPanel, "USER_LIST"));
+        buttonPanel.add(cancelButton);
+        
         // Save button
-        gbc.gridy = 5;
         JButton saveButton = UIUtils.createButton("Save Changes", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
         saveButton.addActionListener(e -> {
             try {
@@ -198,27 +288,23 @@ public class AdminUserManagementScreen extends JFrame {
                 selectedUser.setEmail(emailField.getText());
                 selectedUser.setRole(User.UserRole.fromString((String)roleCombo.getSelectedItem()));
                 selectedUser.setActive(statusCombo.getSelectedItem().equals("Active"));
-                
-                authController.updateUser(selectedUser);
-                JOptionPane.showMessageDialog(this, "User updated successfully");
-                cardLayout.show(mainPanel, "USER_LIST");
+
+                // Update user in database
+                UserDAO userDAO = new SQLUserDAO();
+                userDAO.update(selectedUser);
+
+                // Refresh user list and show success message
                 loadUsers();
+                cardLayout.show(mainPanel, "USER_LIST");
+                UIUtils.showSuccess(this, "User updated successfully");
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Error updating user: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                UIUtils.showError(this, "Error updating user: " + ex.getMessage());
             }
         });
-        formPanel.add(saveButton, gbc);
+        buttonPanel.add(saveButton);
 
-        // Back button
-        gbc.gridy = 6;
-        JButton backButton = UIUtils.createButton("Back to List", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
-        backButton.addActionListener(e -> cardLayout.show(mainPanel, "USER_LIST"));
-        formPanel.add(backButton, gbc);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        panel.add(formPanel, BorderLayout.CENTER);
         return panel;
     }
 

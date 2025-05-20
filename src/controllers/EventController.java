@@ -2,17 +2,11 @@ package controllers;
 
 import models.Event;
 import models.User;
-import models.Venue;
-import models.Category;
 import models.Event.EventStatus;
 import dao.EventDAO;
 import dao.SQLEventDAO;
 import dao.UserDAO;
 import dao.SQLUserDAO;
-import dao.CategoryDAO;
-import dao.SQLCategoryDAO;
-import dao.VenueDAO;
-import dao.SQLVenueDAO;
 import utils.ValidationUtils;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -27,15 +21,11 @@ public class EventController {
     private static EventController instance;
     private final EventDAO eventDAO;
     private final UserDAO userDAO;
-    private final CategoryDAO categoryDAO;
-    private final VenueDAO venueDAO;
     
     // Private constructor for singleton pattern
     private EventController() throws SQLException {
         this.eventDAO = new SQLEventDAO();
         this.userDAO = new SQLUserDAO();
-        this.categoryDAO = new SQLCategoryDAO();
-        this.venueDAO = new SQLVenueDAO();
     }
     
     /**
@@ -54,50 +44,70 @@ public class EventController {
     /**
      * Create a new event
      * 
-     * @param name Event name
+     * @param title Event title
      * @param description Event description
-     * @param startDateTime Event start date and time
-     * @param endDateTime Event end date and time
-     * @param venue Event venue
-     * @param capacity Maximum capacity
+     * @param eventDate Event date and time
+     * @param registrationDeadline Registration deadline
+     * @param venueName Event venue name
+     * @param totalSlots Maximum capacity
+     * @param organizer Event organizer
      * @param category Event category
-     * @param mainImagePath Path to the main event image
-     * @param additionalDocumentPaths Paths to additional event documents (comma-separated)
+     * @param mainImage Main event image data
+     * @param mainImageType MIME type of the image
+     * @param additionalDocuments Additional event documents data
+     * @param additionalDocumentsType MIME type of the additional documents
      * @return The created event
      * @throws IllegalArgumentException if the input is invalid
      */
-    public Event createEvent(String name, String description, LocalDateTime startDateTime,
-                           LocalDateTime endDateTime, Venue venue, int capacity, 
-                           String categoryName, String mainImagePath, String additionalDocumentPaths) throws SQLException {
+    public Event createEvent(String title, String description, LocalDateTime eventDate,
+                           LocalDateTime registrationDeadline, String venueName,
+                           int totalSlots, User organizer, String category,
+                           byte[] mainImage, String mainImageType,
+                           byte[] additionalDocuments, String additionalDocumentsType) throws SQLException {
         // Validate input
-        if (!ValidationUtils.isNotEmpty(name)) {
-            throw new IllegalArgumentException("Event name is required");
+        if (!ValidationUtils.isNotEmpty(title)) {
+            throw new IllegalArgumentException("Event title is required");
         }
-        if (startDateTime == null) {
-            throw new IllegalArgumentException("Start date and time is required");
+        if (eventDate == null) {
+            throw new IllegalArgumentException("Event date is required");
         }
-        if (endDateTime == null) {
-            throw new IllegalArgumentException("End date and time is required");
+        if (registrationDeadline == null) {
+            throw new IllegalArgumentException("Registration deadline is required");
         }
-        if (startDateTime.isAfter(endDateTime)) {
-            throw new IllegalArgumentException("Start date must be before end date");
+        if (eventDate.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Event date cannot be in the past");
         }
-        if (venue == null) {
+        if (registrationDeadline.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Registration deadline cannot be in the past");
+        }
+        if (registrationDeadline.isAfter(eventDate)) {
+            throw new IllegalArgumentException("Registration deadline must be before event date");
+        }
+        if (registrationDeadline.isBefore(LocalDateTime.now().plusHours(1))) {
+            throw new IllegalArgumentException("Registration deadline must be at least 1 hour in the future");
+        }
+        if (!ValidationUtils.isNotEmpty(venueName)) {
             throw new IllegalArgumentException("Event venue is required");
         }
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("Capacity must be greater than 0");
+        if (totalSlots <= 0) {
+            throw new IllegalArgumentException("Total slots must be greater than 0");
         }
-        if (!ValidationUtils.isNotEmpty(categoryName)) {
+        if (organizer == null) {
+            throw new IllegalArgumentException("Event organizer is required");
+        }
+        if (!ValidationUtils.isNotEmpty(category)) {
             throw new IllegalArgumentException("Event category is required");
         }
         
         // Create event
-        Event event = new Event(name, description, startDateTime, endDateTime, 
-                              venue.getName(), capacity, null, categoryName);
-        event.setStatus(EventStatus.PENDING);
-        event.setMainImagePath(mainImagePath);
-        event.setAdditionalDocumentPaths(additionalDocumentPaths);
+        Event event = new Event(title, description, eventDate, registrationDeadline,
+                              venueName, totalSlots, organizer, category);
+        
+        // Set additional fields
+        event.setMainImage(mainImage);
+        event.setMainImageType(mainImageType);
+        event.setAdditionalDocuments(additionalDocuments);
+        event.setAdditionalDocumentsType(additionalDocumentsType);
         
         return eventDAO.save(event);
     }
@@ -106,41 +116,49 @@ public class EventController {
      * Update an existing event
      * 
      * @param id Event ID
-     * @param name Event name
+     * @param title Event title
      * @param description Event description
-     * @param startDateTime Event start date and time
-     * @param endDateTime Event end date and time
-     * @param venue Event venue
-     * @param capacity Maximum capacity
+     * @param eventDate Event date and time
+     * @param registrationDeadline Registration deadline
+     * @param venueName Event venue name
+     * @param totalSlots Maximum capacity
+     * @param organizer Event organizer
      * @param category Event category
-     * @param mainImagePath Path to the main event image
-     * @param additionalDocumentPaths Paths to additional event documents (comma-separated)
+     * @param mainImage Main event image data
+     * @param mainImageType MIME type of the image
+     * @param additionalDocuments Additional event documents data
+     * @param additionalDocumentsType MIME type of the additional documents
      * @return The updated event
      * @throws IllegalArgumentException if the input is invalid
      */
-    public Event updateEvent(int id, String name, String description, LocalDateTime startDateTime,
-                           LocalDateTime endDateTime, Venue venue, int capacity, 
-                           String categoryName, String mainImagePath, String additionalDocumentPaths) throws SQLException {
+    public Event updateEvent(int id, String title, String description, LocalDateTime eventDate,
+                           LocalDateTime registrationDeadline, String venueName,
+                           int totalSlots, User organizer, String category,
+                           byte[] mainImage, String mainImageType,
+                           byte[] additionalDocuments, String additionalDocumentsType) throws SQLException {
         // Validate input
-        if (!ValidationUtils.isNotEmpty(name)) {
-            throw new IllegalArgumentException("Event name is required");
+        if (!ValidationUtils.isNotEmpty(title)) {
+            throw new IllegalArgumentException("Event title is required");
         }
-        if (startDateTime == null) {
-            throw new IllegalArgumentException("Start date and time is required");
+        if (eventDate == null) {
+            throw new IllegalArgumentException("Event date is required");
         }
-        if (endDateTime == null) {
-            throw new IllegalArgumentException("End date and time is required");
+        if (registrationDeadline == null) {
+            throw new IllegalArgumentException("Registration deadline is required");
         }
-        if (startDateTime.isAfter(endDateTime)) {
-            throw new IllegalArgumentException("Start date must be before end date");
+        if (eventDate.isBefore(registrationDeadline)) {
+            throw new IllegalArgumentException("Event date must be after registration deadline");
         }
-        if (venue == null) {
+        if (!ValidationUtils.isNotEmpty(venueName)) {
             throw new IllegalArgumentException("Event venue is required");
         }
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("Capacity must be greater than 0");
+        if (totalSlots <= 0) {
+            throw new IllegalArgumentException("Total slots must be greater than 0");
         }
-        if (!ValidationUtils.isNotEmpty(categoryName)) {
+        if (organizer == null) {
+            throw new IllegalArgumentException("Event organizer is required");
+        }
+        if (!ValidationUtils.isNotEmpty(category)) {
             throw new IllegalArgumentException("Event category is required");
         }
         
@@ -151,15 +169,18 @@ public class EventController {
         }
         
         // Update event
-        event.setName(name);
+        event.setTitle(title);
         event.setDescription(description);
-        event.setStartDateTime(startDateTime);
-        event.setEndDateTime(endDateTime);
-        event.setVenue(venue);
-        event.setCapacity(capacity);
-        event.setCategoryName(categoryName);
-        event.setMainImagePath(mainImagePath);
-        event.setAdditionalDocumentPaths(additionalDocumentPaths);
+        event.setEventDate(eventDate);
+        event.setRegistrationDeadline(registrationDeadline);
+        event.setVenueName(venueName);
+        event.setTotalSlots(totalSlots);
+        event.setOrganizer(organizer);
+        event.setCategory(category);
+        event.setMainImage(mainImage);
+        event.setMainImageType(mainImageType);
+        event.setAdditionalDocuments(additionalDocuments);
+        event.setAdditionalDocumentsType(additionalDocumentsType);
         
         return eventDAO.update(event);
     }
@@ -196,44 +217,35 @@ public class EventController {
     /**
      * Get events by category
      * 
-     * @param categoryName The name of the category
-     * @return A list of events with the specified category name
-     * @throws SQLException if a database error occurs
+     * @param category Category name
+     * @return List of events in the specified category
      */
-    public List<Event> getEventsByCategory(String categoryName) throws SQLException {
-        // Assuming EventDAO has a findByCategoryName method or filter all events
-        // For simplicity, filtering all events for now.
-        List<Event> allEvents = eventDAO.findAll();
-        return allEvents.stream()
-            .filter(event -> event.getCategoryName() != null && event.getCategoryName().equalsIgnoreCase(categoryName))
+    public List<Event> getEventsByCategory(String category) throws SQLException {
+        return eventDAO.findAll().stream()
+                .filter(event -> event.getCategory().equals(category))
             .collect(Collectors.toList());
     }
     
     /**
-     * Get events by venue name.
-     * @param venueName The name of the venue.
-     * @return A list of events at the specified venue name.
-     * @throws SQLException if a database error occurs.
-     * @throws IllegalArgumentException if the venue name is empty.
+     * Get events by venue name
+     * 
+     * @param venueName The name of the venue
+     * @return A list of events at the specified venue
      */
     public List<Event> getEventsByVenue(String venueName) throws SQLException {
         if (!ValidationUtils.isNotEmpty(venueName)) {
-            throw new IllegalArgumentException("Venue name cannot be empty.");
+            throw new IllegalArgumentException("Venue name cannot be empty");
         }
-        // Assuming EventDAO has a findByVenueName method or filter all events
-        // For simplicity, filtering all events for now.
-        List<Event> allEvents = eventDAO.findAll();
-        return allEvents.stream()
-            .filter(event -> event.getVenueName() != null && event.getVenueName().equalsIgnoreCase(venueName.trim()))
+        return eventDAO.findAll().stream()
+                .filter(event -> event.getVenueName().equalsIgnoreCase(venueName.trim()))
             .collect(Collectors.toList());
     }
     
     /**
      * Get events by organizer
      * 
-     * @param organizerId The ID of the organizer
-     * @return A list of events organized by the specified user
-     * @throws SQLException if a database error occurs
+     * @param organizerId Organizer ID
+     * @return List of events organized by the specified user
      */
     public List<Event> getEventsByOrganizer(int organizerId) throws SQLException {
         return eventDAO.findByOrganizer(organizerId);
@@ -244,7 +256,6 @@ public class EventController {
      * 
      * @param status The status to filter by
      * @return A list of events with the specified status
-     * @throws SQLException if a database error occurs
      */
     public List<Event> getEventsByStatus(EventStatus status) throws SQLException {
         return eventDAO.findByStatus(status);
@@ -254,7 +265,6 @@ public class EventController {
      * Get upcoming events
      * 
      * @return A list of upcoming events
-     * @throws SQLException if a database error occurs
      */
     public List<Event> getUpcomingEvents() throws SQLException {
         return eventDAO.findUpcoming();
@@ -264,7 +274,6 @@ public class EventController {
      * Get past events
      * 
      * @return A list of past events
-     * @throws SQLException if a database error occurs
      */
     public List<Event> getPastEvents() throws SQLException {
         return eventDAO.findPast();
@@ -275,14 +284,15 @@ public class EventController {
      * 
      * @param eventId The ID of the event to approve
      * @return The approved event
-     * @throws SQLException if a database error occurs
      */
     public Event approveEvent(int eventId) throws SQLException {
         Event event = eventDAO.findById(eventId);
         if (event == null) {
             throw new IllegalArgumentException("Event not found");
         }
-        
+        if (event.getStatus() != EventStatus.PENDING) {
+            throw new IllegalStateException("Only pending events can be approved");
+        }
         event.setStatus(EventStatus.APPROVED);
         return eventDAO.update(event);
     }
@@ -292,14 +302,15 @@ public class EventController {
      * 
      * @param eventId The ID of the event to reject
      * @return The rejected event
-     * @throws SQLException if a database error occurs
      */
     public Event rejectEvent(int eventId) throws SQLException {
         Event event = eventDAO.findById(eventId);
         if (event == null) {
             throw new IllegalArgumentException("Event not found");
         }
-        
+        if (event.getStatus() != EventStatus.PENDING) {
+            throw new IllegalStateException("Only pending events can be rejected");
+        }
         event.setStatus(EventStatus.REJECTED);
         return eventDAO.update(event);
     }
@@ -309,25 +320,84 @@ public class EventController {
      * 
      * @param eventId The ID of the event to cancel
      * @return The cancelled event
-     * @throws SQLException if a database error occurs
      */
     public Event cancelEvent(int eventId) throws SQLException {
         Event event = eventDAO.findById(eventId);
         if (event == null) {
             throw new IllegalArgumentException("Event not found");
         }
-        
+        if (event.getStatus() == EventStatus.CANCELLED || event.getStatus() == EventStatus.COMPLETED) {
+            throw new IllegalStateException("Event is already cancelled or completed");
+        }
         event.setStatus(EventStatus.CANCELLED);
         return eventDAO.update(event);
     }
     
     /**
-     * Search for events by name
+     * Search events by title or description
      * 
      * @param query The search query
-     * @return A list of events matching the query
+     * @return A list of matching events
      */
     public List<Event> searchEvents(String query) throws SQLException {
         return eventDAO.search(query);
+    }
+    
+    /**
+     * Get total number of events
+     * 
+     * @return The total number of events
+     */
+    public int getTotalEvents() throws SQLException {
+        return eventDAO.findAll().size();
+    }
+    
+    /**
+     * Get active events (approved and upcoming)
+     * 
+     * @return A list of active events
+     */
+    public List<Event> getActiveEvents() throws SQLException {
+        return eventDAO.findAll().stream()
+                .filter(event -> event.getStatus() == EventStatus.APPROVED && event.isUpcoming())
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get total number of registrations across all events
+     * 
+     * @return The total number of registrations
+     */
+    public int getTotalRegistrations() throws SQLException {
+        return eventDAO.getTotalRegistrations();
+    }
+    
+    /**
+     * Get today's events
+     * 
+     * @return A list of today's events
+     */
+    public List<Event> getTodaysEvents() throws SQLException {
+        return eventDAO.findToday();
+    }
+    
+    /**
+     * Update event status
+     * 
+     * @param event The event to update
+     * @return The updated event
+     * @throws SQLException if a database error occurs
+     */
+    public Event updateEvent(Event event) throws SQLException {
+        if (event == null) {
+            throw new IllegalArgumentException("Event cannot be null");
+        }
+        
+        Event existingEvent = eventDAO.findById(event.getId());
+        if (existingEvent == null) {
+            throw new IllegalArgumentException("Event not found");
+        }
+        
+        return eventDAO.update(event);
     }
 }

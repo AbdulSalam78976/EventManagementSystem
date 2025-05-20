@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
- * Data Access Object interface for Event entities
+ * Data Access Object interface for Event model
  */
 public interface EventDAO {
     
@@ -64,23 +64,23 @@ public interface EventDAO {
     /**
      * Find events by category
      * 
-     * @param categoryId The ID of the category
+     * @param category The category name
      * @return A list of events in the specified category
      * @throws SQLException if a database error occurs
      */
-    List<Event> findByCategory(int categoryId) throws SQLException;
+    List<Event> findByCategory(String category) throws SQLException;
     
     /**
-     * Find events by venue
+     * Find events by venue name
      * 
-     * @param venueId The ID of the venue
+     * @param venueName The name of the venue
      * @return A list of events at the specified venue
      * @throws SQLException if a database error occurs
      */
-    List<Event> findByVenue(int venueId) throws SQLException;
+    List<Event> findByVenue(String venueName) throws SQLException;
     
     /**
-     * Search for events by name or description
+     * Search for events by title or description
      * 
      * @param query The search query
      * @return A list of events matching the query
@@ -130,4 +130,12 @@ public interface EventDAO {
      * @throws SQLException if a database error occurs
      */
     List<Event> findToday() throws SQLException;
+
+    /**
+     * Get the total number of event registrations
+     * 
+     * @return The total number of registrations
+     * @throws SQLException if a database error occurs
+     */
+    int getTotalRegistrations() throws SQLException;
 }

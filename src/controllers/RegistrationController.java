@@ -80,13 +80,13 @@ public class RegistrationController {
         Registration registration = new Registration(user, event);
         
         // Check if the event is at capacity
-        if (event.getRegisteredCount() >= event.getCapacity()) {
+        if (event.getAvailableSlots() <= 0) {
             registration.setStatus(Status.WAITLISTED);
         } else {
             registration.setStatus(Status.REGISTERED);
             
-            // Update the event's registered count
-            event.setRegisteredCount(event.getRegisteredCount() + 1);
+            // Update the event's available slots
+            event.setAvailableSlots(event.getAvailableSlots() - 1);
             eventDAO.update(event);
         }
         
@@ -137,10 +137,10 @@ public class RegistrationController {
         // Cancel the registration
         registration.setStatus(Status.CANCELLED);
         
-        // Update the event's registered count if the registration was active
+        // Update the event's available slots if the registration was active
         if (registration.getStatus() == Status.REGISTERED) {
             Event event = registration.getEvent();
-            event.setRegisteredCount(event.getRegisteredCount() - 1);
+            event.setAvailableSlots(event.getAvailableSlots() + 1);
             eventDAO.update(event);
             
             // Check if there are waitlisted registrations that can be promoted
@@ -185,7 +185,7 @@ public class RegistrationController {
         }
         
         // Check if there's room for more registrations
-        if (event.getRegisteredCount() >= event.getCapacity()) {
+        if (event.getAvailableSlots() <= 0) {
             return;
         }
         
@@ -199,8 +199,8 @@ public class RegistrationController {
         waitlisted.setStatus(Status.REGISTERED);
         registrationDAO.update(waitlisted);
         
-        // Update the event's registered count
-        event.setRegisteredCount(event.getRegisteredCount() + 1);
+        // Update the event's available slots
+        event.setAvailableSlots(event.getAvailableSlots() - 1);
         eventDAO.update(event);
     }
     
@@ -323,14 +323,18 @@ public class RegistrationController {
     }
     
     /**
-     * Get the number of registrations for an event
+     * Get the total number of registrations for an event
      * 
      * @param eventId The ID of the event
-     * @return The number of registrations
+     * @return The total number of registrations
      * @throws SQLException if a database error occurs
      */
     public int getRegistrationCount(int eventId) throws SQLException {
-        return registrationDAO.countByEvent(eventId);
+        Event event = eventDAO.findById(eventId);
+        if (event == null) {
+            throw new IllegalArgumentException("Event not found");
+        }
+        return event.getTotalSlots() - event.getAvailableSlots();
     }
     
     /**
@@ -339,15 +343,13 @@ public class RegistrationController {
      * @param eventId The ID of the event
      * @return The number of available slots
      * @throws SQLException if a database error occurs
-     * @throws IllegalArgumentException if event is not found
      */
     public int getAvailableSlots(int eventId) throws SQLException {
         Event event = eventDAO.findById(eventId);
         if (event == null) {
             throw new IllegalArgumentException("Event not found");
         }
-        
-        return event.getCapacity() - getRegistrationCount(eventId);
+        return event.getAvailableSlots();
     }
     
     /**
@@ -360,5 +362,15 @@ public class RegistrationController {
      */
     public boolean isUserRegistered(int eventId, int userId) throws SQLException {
         return registrationDAO.existsByUserAndEvent(userId, eventId);
+    }
+    
+    /**
+     * Get all registrations
+     * 
+     * @return A list of all registrations
+     * @throws SQLException if a database error occurs
+     */
+    public List<Registration> getAllRegistrations() throws SQLException {
+        return registrationDAO.findAll();
     }
 }

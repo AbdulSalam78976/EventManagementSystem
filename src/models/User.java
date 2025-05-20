@@ -12,7 +12,6 @@ public class User {
     private String password;
     private UserRole role;
     private String phone;
-    private String studentId; // Only applicable for Attendees
     private boolean active;
     private String registrationDate;
     private Date createdAt;
@@ -48,6 +47,15 @@ public class User {
             }
             throw new IllegalArgumentException("No role with display name: " + text);
         }
+    }
+
+    /**
+     * Default constructor
+     */
+    public User() {
+        this.active = true;
+        this.createdAt = new Date();
+        this.registrationDate = java.time.LocalDate.now().toString();
     }
 
     /**
@@ -134,14 +142,6 @@ public class User {
 
     public void setPhone(String phone) {
         this.phone = phone;
-    }
-
-    public String getStudentId() {
-        return studentId;
-    }
-
-    public void setStudentId(String studentId) {
-        this.studentId = studentId;
     }
 
     public boolean isActive() {

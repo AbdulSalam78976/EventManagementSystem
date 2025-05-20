@@ -228,4 +228,14 @@ public class UserController {
             .filter(user -> user.getRole() == role)
             .collect(Collectors.toList());
     }
+
+    /**
+     * Get the total number of users
+     * 
+     * @return The total number of users
+     * @throws SQLException if a database error occurs
+     */
+    public int getTotalUsers() throws SQLException {
+        return userDAO.getAllUsers().size();
+    }
 } 

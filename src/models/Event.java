@@ -9,20 +9,22 @@ import java.util.List;
  */
 public class Event {
     private int id;
-    private String name;
+    private String title;
     private String description;
-    private LocalDateTime startDateTime;
-    private LocalDateTime endDateTime;
+    private String category;
     private String venueName;
-    private int capacity;
-    private int registeredCount;
     private User organizer;
-    private String categoryName;
+    private LocalDateTime eventDate;
+    private LocalDateTime registrationDeadline;
+    private int totalSlots;
+    private int availableSlots;
+    private String eligibilityCriteria;
+    private String contactInfo;
     private EventStatus status;
-    private String requirements;
-    private String mainImagePath;
-    private String additionalDocumentPaths;
-    private boolean featured;
+    private byte[] mainImage;
+    private String mainImageType;
+    private byte[] additionalDocuments;
+    private String additionalDocumentsType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<Registration> registrations;
@@ -32,6 +34,7 @@ public class Event {
      * Enum representing the different statuses an event can have
      */
     public enum EventStatus {
+        DRAFT("Draft"),
         PENDING("Pending"),
         APPROVED("Approved"),
         REJECTED("Rejected"),
@@ -64,50 +67,33 @@ public class Event {
         this.feedbacks = new ArrayList<>();
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.status = EventStatus.DRAFT;
     }
 
     // Constructor with essential fields
-    public Event(String name, String description, LocalDateTime startDateTime, 
-                LocalDateTime endDateTime, String venueName, int capacity, User organizer, 
-                String categoryName) {
+    public Event(String title, String description, LocalDateTime eventDate, 
+                LocalDateTime registrationDeadline, String venueName,
+                int totalSlots, User organizer, String category) {
         this();
-        this.name = name;
+        this.title = title;
         this.description = description;
-        this.startDateTime = startDateTime;
-        this.endDateTime = endDateTime;
+        this.eventDate = eventDate;
+        this.registrationDeadline = registrationDeadline;
         this.venueName = venueName;
-        this.capacity = capacity;
+        this.totalSlots = totalSlots;
+        this.availableSlots = totalSlots;
         this.organizer = organizer;
-        this.categoryName = categoryName;
-        this.status = organizer.getRole() == User.UserRole.ADMIN ? 
-                      EventStatus.APPROVED : EventStatus.PENDING;
-    }
-
-    // Full constructor
-    public Event(int id, String name, String description, LocalDateTime startDateTime,
-                LocalDateTime endDateTime, String venueName, int capacity, int registeredCount,
-                User organizer, String categoryName, EventStatus status, String requirements,
-                String mainImagePath, String additionalDocumentPaths, boolean featured, LocalDateTime createdAt,
-                LocalDateTime updatedAt) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.startDateTime = startDateTime;
-        this.endDateTime = endDateTime;
-        this.venueName = venueName;
-        this.capacity = capacity;
-        this.registeredCount = registeredCount;
-        this.organizer = organizer;
-        this.categoryName = categoryName;
-        this.status = status;
-        this.requirements = requirements;
-        this.mainImagePath = mainImagePath;
-        this.additionalDocumentPaths = additionalDocumentPaths;
-        this.featured = featured;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.registrations = new ArrayList<>();
-        this.feedbacks = new ArrayList<>();
+        this.category = category;
+        
+        // Set status based on organizer's role
+        if (organizer.getRole() == User.UserRole.ADMIN) {
+            this.status = EventStatus.APPROVED;
+        } else {
+            this.status = EventStatus.PENDING;
+        }
+        
+        // Set contact info from organizer's email
+        this.contactInfo = organizer.getEmail();
     }
 
     // Getters and setters
@@ -119,12 +105,12 @@ public class Event {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getTitle() {
+        return title;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getDescription() {
@@ -135,20 +121,12 @@ public class Event {
         this.description = description;
     }
 
-    public LocalDateTime getStartDateTime() {
-        return startDateTime;
+    public String getCategory() {
+        return category;
     }
 
-    public void setStartDateTime(LocalDateTime startDateTime) {
-        this.startDateTime = startDateTime;
-    }
-
-    public LocalDateTime getEndDateTime() {
-        return endDateTime;
-    }
-
-    public void setEndDateTime(LocalDateTime endDateTime) {
-        this.endDateTime = endDateTime;
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public String getVenueName() {
@@ -159,22 +137,6 @@ public class Event {
         this.venueName = venueName;
     }
 
-    public int getCapacity() {
-        return capacity;
-    }
-
-    public void setCapacity(int capacity) {
-        this.capacity = capacity;
-    }
-
-    public int getRegisteredCount() {
-        return registeredCount;
-    }
-
-    public void setRegisteredCount(int registeredCount) {
-        this.registeredCount = registeredCount;
-    }
-
     public User getOrganizer() {
         return organizer;
     }
@@ -183,12 +145,52 @@ public class Event {
         this.organizer = organizer;
     }
 
-    public String getCategoryName() {
-        return categoryName;
+    public LocalDateTime getEventDate() {
+        return eventDate;
     }
 
-    public void setCategoryName(String categoryName) {
-        this.categoryName = categoryName;
+    public void setEventDate(LocalDateTime eventDate) {
+        this.eventDate = eventDate;
+    }
+
+    public LocalDateTime getRegistrationDeadline() {
+        return registrationDeadline;
+    }
+
+    public void setRegistrationDeadline(LocalDateTime registrationDeadline) {
+        this.registrationDeadline = registrationDeadline;
+    }
+
+    public int getTotalSlots() {
+        return totalSlots;
+    }
+
+    public void setTotalSlots(int totalSlots) {
+        this.totalSlots = totalSlots;
+    }
+
+    public int getAvailableSlots() {
+        return availableSlots;
+    }
+
+    public void setAvailableSlots(int availableSlots) {
+        this.availableSlots = availableSlots;
+    }
+
+    public String getEligibilityCriteria() {
+        return eligibilityCriteria;
+    }
+
+    public void setEligibilityCriteria(String eligibilityCriteria) {
+        this.eligibilityCriteria = eligibilityCriteria;
+    }
+
+    public String getContactInfo() {
+        return contactInfo;
+    }
+
+    public void setContactInfo(String contactInfo) {
+        this.contactInfo = contactInfo;
     }
 
     public EventStatus getStatus() {
@@ -200,36 +202,36 @@ public class Event {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public String getRequirements() {
-        return requirements;
+    public byte[] getMainImage() {
+        return mainImage;
     }
 
-    public void setRequirements(String requirements) {
-        this.requirements = requirements;
+    public void setMainImage(byte[] mainImage) {
+        this.mainImage = mainImage;
     }
 
-    public String getMainImagePath() {
-        return mainImagePath;
+    public String getMainImageType() {
+        return mainImageType;
     }
 
-    public void setMainImagePath(String mainImagePath) {
-        this.mainImagePath = mainImagePath;
+    public void setMainImageType(String mainImageType) {
+        this.mainImageType = mainImageType;
     }
 
-    public String getAdditionalDocumentPaths() {
-        return additionalDocumentPaths;
+    public byte[] getAdditionalDocuments() {
+        return additionalDocuments;
     }
 
-    public void setAdditionalDocumentPaths(String additionalDocumentPaths) {
-        this.additionalDocumentPaths = additionalDocumentPaths;
+    public void setAdditionalDocuments(byte[] additionalDocuments) {
+        this.additionalDocuments = additionalDocuments;
     }
 
-    public boolean isFeatured() {
-        return featured;
+    public String getAdditionalDocumentsType() {
+        return additionalDocumentsType;
     }
 
-    public void setFeatured(boolean featured) {
-        this.featured = featured;
+    public void setAdditionalDocumentsType(String additionalDocumentsType) {
+        this.additionalDocumentsType = additionalDocumentsType;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -254,12 +256,10 @@ public class Event {
 
     public void setRegistrations(List<Registration> registrations) {
         this.registrations = registrations;
-        this.registeredCount = registrations.size();
     }
 
     public void addRegistration(Registration registration) {
         this.registrations.add(registration);
-        this.registeredCount = this.registrations.size();
     }
 
     public List<Feedback> getFeedbacks() {
@@ -274,31 +274,32 @@ public class Event {
         this.feedbacks.add(feedback);
     }
 
+    public int getRegisteredUsers() {
+        return registrations != null ? registrations.size() : totalSlots - availableSlots;
+    }
+
     public boolean isAvailable() {
-        return status == EventStatus.APPROVED && registeredCount < capacity;
+        return availableSlots > 0 && 
+               LocalDateTime.now().isBefore(registrationDeadline) &&
+               status == EventStatus.APPROVED;
     }
 
     public boolean isUpcoming() {
-        return startDateTime.isAfter(LocalDateTime.now());
+        return eventDate.isAfter(LocalDateTime.now());
     }
 
     public boolean isOngoing() {
         LocalDateTime now = LocalDateTime.now();
-        return startDateTime.isBefore(now) && endDateTime.isAfter(now);
+        return !eventDate.isAfter(now) && 
+               eventDate.plusHours(4).isAfter(now); // Assuming events last 4 hours
     }
 
     public boolean isPast() {
-        return endDateTime.isBefore(LocalDateTime.now());
+        return eventDate.plusHours(4).isBefore(LocalDateTime.now());
     }
 
     @Override
     public String toString() {
-        return "Event{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", startDateTime=" + startDateTime +
-                ", venueName='" + venueName + '\'' +
-                ", status=" + status +
-                '}';
+        return title;
     }
 }

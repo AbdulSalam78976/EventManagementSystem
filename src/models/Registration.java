@@ -94,7 +94,7 @@ public class Registration {
     public String toString() {
         return "Registration{" +
                 "id=" + id +
-                ", event=" + event.getName() +
+                ", event=" + event.getTitle() +
                 ", attendee=" + attendee.getName() +
                 ", registrationDate=" + registrationDate +
                 ", status=" + status +

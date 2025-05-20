@@ -25,7 +25,6 @@ public class EventRegistrationDialog extends JDialog {
     private JTextField nameField;
     private JTextField emailField;
     private JTextField phoneField;
-    private JTextField studentIdField;
     private JTextArea specialRequirementsArea;
     private JCheckBox eligibilityCheckbox;
     private JLabel errorLabel;
@@ -106,73 +105,75 @@ public class EventRegistrationDialog extends JDialog {
         JPanel formPanel = UIUtils.createPanel(new BoxLayout(null, BoxLayout.Y_AXIS), false);
         formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Name field
-        JLabel nameLabel = UIUtils.createLabel(
-            "Full Name:",
-            UIConstants.BODY_FONT,
-            AppColors.TEXT_PRIMARY
-        );
-        nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        formPanel.add(nameLabel);
-        formPanel.add(Box.createVerticalStrut(5));
-
-        nameField = UIUtils.createRoundedTextField();
-        nameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        formPanel.add(nameField);
-        formPanel.add(Box.createVerticalStrut(15));
-
-        // Email field
-        JLabel emailLabel = UIUtils.createLabel(
-            "Email:",
-            UIConstants.BODY_FONT,
-            AppColors.TEXT_PRIMARY
-        );
-        emailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        formPanel.add(emailLabel);
-        formPanel.add(Box.createVerticalStrut(5));
-
-        emailField = UIUtils.createRoundedTextField();
-        emailField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        formPanel.add(emailField);
-        formPanel.add(Box.createVerticalStrut(15));
-
-        // Phone field
-        JLabel phoneLabel = UIUtils.createLabel(
-            "Phone:",
-            UIConstants.BODY_FONT,
-            AppColors.TEXT_PRIMARY
-        );
-        phoneLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        formPanel.add(phoneLabel);
-        formPanel.add(Box.createVerticalStrut(5));
-
-        phoneField = UIUtils.createRoundedTextField();
-        phoneField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        formPanel.add(phoneField);
-        formPanel.add(Box.createVerticalStrut(15));
-
-        // Notes field
-        JLabel notesLabel = UIUtils.createLabel(
-            "Additional Notes:",
-            UIConstants.BODY_FONT,
-            AppColors.TEXT_PRIMARY
-        );
-        notesLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        formPanel.add(notesLabel);
-        formPanel.add(Box.createVerticalStrut(5));
-
-        specialRequirementsArea = new JTextArea(3, 20);
-        specialRequirementsArea.setFont(UIConstants.BODY_FONT);
-        specialRequirementsArea.setLineWrap(true);
-        specialRequirementsArea.setWrapStyleWord(true);
-        specialRequirementsArea.setBorder(BorderFactory.createCompoundBorder(
+        // Event details
+        JPanel detailsPanel = UIUtils.createPanel(new BoxLayout(null, BoxLayout.Y_AXIS), false);
+        detailsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(AppColors.BORDER),
-            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
 
-        JScrollPane notesScroll = new JScrollPane(specialRequirementsArea);
-        notesScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-        formPanel.add(notesScroll);
+        // Event name
+        JLabel eventLabel = UIUtils.createLabel(
+            "Event: " + eventName,
+            UIConstants.BODY_FONT,
+            AppColors.TEXT_PRIMARY
+        );
+        eventLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.add(eventLabel);
+        detailsPanel.add(Box.createVerticalStrut(10));
+
+        // Event date
+        JLabel dateLabel = UIUtils.createLabel(
+            "Date: " + eventDate.toString(),
+            UIConstants.BODY_FONT,
+            AppColors.TEXT_PRIMARY
+        );
+        dateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.add(dateLabel);
+        detailsPanel.add(Box.createVerticalStrut(10));
+
+        // Event venue
+        JLabel venueLabel = UIUtils.createLabel(
+            "Venue: " + venue,
+            UIConstants.BODY_FONT,
+            AppColors.TEXT_PRIMARY
+        );
+        venueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.add(venueLabel);
+        detailsPanel.add(Box.createVerticalStrut(10));
+
+        // Available slots
+        JLabel slotsLabel = UIUtils.createLabel(
+            "Available Slots: " + availableSlots,
+            UIConstants.BODY_FONT,
+            AppColors.TEXT_PRIMARY
+        );
+        slotsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.add(slotsLabel);
+        detailsPanel.add(Box.createVerticalStrut(10));
+
+        // Eligibility criteria
+        JLabel eligibilityLabel = UIUtils.createLabel(
+            "Eligibility Criteria:",
+            UIConstants.BODY_FONT,
+            AppColors.TEXT_PRIMARY
+        );
+        eligibilityLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.add(eligibilityLabel);
+        detailsPanel.add(Box.createVerticalStrut(5));
+
+        JTextArea eligibilityText = new JTextArea(eligibilityCriteria);
+        eligibilityText.setFont(UIConstants.BODY_FONT);
+        eligibilityText.setLineWrap(true);
+        eligibilityText.setWrapStyleWord(true);
+        eligibilityText.setEditable(false);
+        eligibilityText.setBackground(null);
+        eligibilityText.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        detailsPanel.add(eligibilityText);
+
+        formPanel.add(detailsPanel);
+        formPanel.add(Box.createVerticalStrut(20));
 
         return formPanel;
     }
@@ -188,7 +189,9 @@ public class EventRegistrationDialog extends JDialog {
             UIUtils.ButtonSize.NORMAL
         );
         cancelButton.addActionListener(e -> {
-            confirmed = false;
+            if (onRegistrationComplete != null) {
+                onRegistrationComplete.accept(false);
+            }
             dispose();
         });
 
@@ -198,10 +201,14 @@ public class EventRegistrationDialog extends JDialog {
             UIUtils.ButtonType.PRIMARY,
             UIUtils.ButtonSize.NORMAL
         );
-        registerButton.addActionListener(e -> handleRegistration());
+        registerButton.addActionListener(e -> {
+            if (onRegistrationComplete != null) {
+                onRegistrationComplete.accept(true);
+            }
+            dispose();
+        });
 
         buttonPanel.add(cancelButton);
-        buttonPanel.add(Box.createHorizontalStrut(10));
         buttonPanel.add(registerButton);
 
         return buttonPanel;
@@ -237,17 +244,6 @@ public class EventRegistrationDialog extends JDialog {
         }
         if (!isValidPhoneNumber(phoneNumber)) {
             errorLabel.setText("Please enter a valid phone number (10 digits).");
-            return;
-        }
-        
-        // Validate student ID
-        String studentId = studentIdField.getText().trim();
-        if (studentId.isEmpty()) {
-            errorLabel.setText("Please enter your student ID.");
-            return;
-        }
-        if (!isValidStudentId(studentId)) {
-            errorLabel.setText("Please enter a valid student ID (alphanumeric, at least 5 characters).");
             return;
         }
         
@@ -298,7 +294,6 @@ public class EventRegistrationDialog extends JDialog {
         nameField.setEnabled(enabled);
         emailField.setEnabled(enabled);
         phoneField.setEnabled(enabled);
-        studentIdField.setEnabled(enabled);
         specialRequirementsArea.setEnabled(enabled);
         eligibilityCheckbox.setEnabled(enabled);
     }
@@ -307,7 +302,6 @@ public class EventRegistrationDialog extends JDialog {
         nameField.setText("");
         emailField.setText("");
         phoneField.setText("");
-        studentIdField.setText("");
         specialRequirementsArea.setText("");
         eligibilityCheckbox.setSelected(false);
         errorLabel.setText(" ");
@@ -323,11 +317,6 @@ public class EventRegistrationDialog extends JDialog {
         String digitsOnly = phoneNumber.replaceAll("\\D", "");
         // Check if it has exactly 10 digits
         return digitsOnly.length() == 10;
-    }
-    
-    private boolean isValidStudentId(String studentId) {
-        // Check if it's alphanumeric and at least 5 characters
-        return studentId.matches("^[a-zA-Z0-9]{5,}$");
     }
 
     /**

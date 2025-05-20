@@ -20,6 +20,7 @@ public class HeaderPanel extends JPanel {
     private final String userRole;
     private final boolean showCreateEventButton;
     private final Consumer<Void> onCreateEventClick;
+    private JPanel rightSection;
 
     /**
      * Creates a header panel with user information and optional create event button
@@ -63,81 +64,16 @@ public class HeaderPanel extends JPanel {
         add(systemName, BorderLayout.WEST);
 
         // User info and actions on the right
+        rightSection = createRightSection();
+        add(rightSection, BorderLayout.EAST);
+    }
+
+    private JPanel createRightSection() {
         JPanel userPanel = UIUtils.createPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0), false);
 
-        // User dropdown
-        JPanel userDropdown = createUserDropdown();
-        userPanel.add(userDropdown);
-
-        // Create Event Button (if enabled)
-        if (showCreateEventButton) {
-            JButton createEventButton = UIUtils.createButton(
-                "Create Event",
-                null,
-                UIUtils.ButtonType.PRIMARY,
-                UIUtils.ButtonSize.SMALL
-            );
-            createEventButton.addActionListener(e -> {
-                if (onCreateEventClick != null) {
-                    onCreateEventClick.accept(null);
-                }
-            });
-            userPanel.add(createEventButton);
-        }
-
-        // Notifications icon
-        JPanel notificationPanel = createNotificationPanel();
-        userPanel.add(notificationPanel);
-        add(userPanel, BorderLayout.EAST);
-    }
-
-    private JPanel createNotificationPanel() {
-        JPanel panel = UIUtils.createPanel(new BorderLayout(), false);
-        panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        // Use an ImageIcon from IconUtils
-        ImageIcon notificationIcon = IconUtils.loadIcon("notification", IconUtils.ICON_SIZE_NORMAL);
-        JLabel notificationLabel = new JLabel(notificationIcon);
-        notificationLabel.setToolTipText("Notifications");
-        panel.add(notificationLabel, BorderLayout.CENTER);
-
-        // Add a red dot for unread notifications
-        JLabel badgeLabel = UIUtils.createLabel(
-            "•",
-            UIConstants.TITLE_FONT,
-            AppColors.ERROR
-        );
-        badgeLabel.setVisible(false); // Hide by default
-        panel.add(badgeLabel, BorderLayout.NORTH);
-
-        // Add click handler
-        panel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                showNotifications();
-            }
-        });
-
-        return panel;
-    }
-
-    private void showNotifications() {
-        JPopupMenu notificationMenu = new JPopupMenu();
+        // User info panel
+        JPanel userInfo = UIUtils.createPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0), false);
         
-        // Add notification items
-        JMenuItem noNotifications = new JMenuItem("No new notifications");
-        noNotifications.setEnabled(false);
-        notificationMenu.add(noNotifications);
-
-        // Show the menu
-        Component source = (Component) notificationMenu.getInvoker();
-        notificationMenu.show(source, source.getWidth() - notificationMenu.getPreferredSize().width, source.getHeight());
-    }
-
-    private JPanel createUserDropdown() {
-        JPanel userDropdown = UIUtils.createPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0), false);
-        userDropdown.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
         // User avatar (circle with first letter of username)
         JPanel avatarPanel = new JPanel() {
             @Override
@@ -168,87 +104,26 @@ public class HeaderPanel extends JPanel {
             }
         };
 
-        JLabel userLabel = UIUtils.createLabel(
-            username,
-            UIConstants.BODY_FONT,
-            Color.WHITE
-        );
+        // User name and role labels
+        JPanel labelPanel = UIUtils.createPanel(new GridLayout(2, 1), false);
+        JLabel userLabel = UIUtils.createLabel(username, UIConstants.BODY_FONT, Color.WHITE);
+        JLabel roleLabel = UIUtils.createLabel("(" + userRole + ")", UIConstants.SMALL_FONT, new Color(220, 220, 220));
+        labelPanel.add(userLabel);
+        labelPanel.add(roleLabel);
 
-        JLabel roleLabel = UIUtils.createLabel(
-            "(" + userRole + ")",
-            UIConstants.SMALL_FONT,
-            new Color(220, 220, 220)
-        );
+        // Logout button
+        JButton logoutButton = UIUtils.createButton("Logout", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
+        logoutButton.setForeground(Color.WHITE);
+        logoutButton.addActionListener(e -> handleLogout());
 
-        JLabel dropdownIcon = UIUtils.createLabel(
-            "▼",
-            UIConstants.SMALL_FONT,
-            Color.WHITE
-        );
+        userInfo.add(avatarPanel);
+        userInfo.add(Box.createHorizontalStrut(10));
+        userInfo.add(labelPanel);
+        userInfo.add(Box.createHorizontalStrut(15));
+        userInfo.add(logoutButton);
 
-        // Create user info panel with proper BoxLayout
-        JPanel userInfo = new JPanel();
-        userInfo.setLayout(new BoxLayout(userInfo, BoxLayout.Y_AXIS));
-        userInfo.setOpaque(false);
-        userInfo.add(userLabel);
-        userInfo.add(roleLabel);
-
-        userDropdown.add(avatarPanel);
-        userDropdown.add(Box.createHorizontalStrut(5));
-        userDropdown.add(userInfo);
-        userDropdown.add(dropdownIcon);
-
-        // Add popup menu to user dropdown
-        JPopupMenu userMenu = createUserMenu();
-        userDropdown.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                userMenu.show(userDropdown, 0, userDropdown.getHeight());
-            }
-        });
-
-        return userDropdown;
-    }
-
-    private JPopupMenu createUserMenu() {
-        JPopupMenu userMenu = new JPopupMenu();
-
-        // Profile menu item
-        JMenuItem profileItem = new JMenuItem("Profile");
-        profileItem.addActionListener(e -> showProfile());
-
-        // Settings menu item
-        JMenuItem settingsItem = new JMenuItem("Settings");
-        settingsItem.addActionListener(e -> showSettings());
-
-        // Logout menu item
-        JMenuItem logoutItem = new JMenuItem("Logout");
-        logoutItem.addActionListener(e -> handleLogout());
-
-        userMenu.add(profileItem);
-        userMenu.add(settingsItem);
-        userMenu.addSeparator();
-        userMenu.add(logoutItem);
-
-        return userMenu;
-    }
-
-    private void showProfile() {
-        JOptionPane.showMessageDialog(
-            this,
-            "Profile view will be implemented here",
-            "Profile",
-            JOptionPane.INFORMATION_MESSAGE
-        );
-    }
-
-    private void showSettings() {
-        JOptionPane.showMessageDialog(
-            this,
-            "Settings view will be implemented here",
-            "Settings",
-            JOptionPane.INFORMATION_MESSAGE
-        );
+        userPanel.add(userInfo);
+        return userPanel;
     }
 
     private void handleLogout() {

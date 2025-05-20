@@ -3,8 +3,6 @@ package dao;
 import models.Event;
 import models.Event.EventStatus;
 import models.User;
-import models.Venue;
-import models.Category;
 import utils.DatabaseConnection;
 
 import java.sql.*;
@@ -80,11 +78,11 @@ public class SQLEventDAO implements EventDAO {
     }
     
     @Override
-    public List<Event> findByCategory(int categoryId) throws SQLException {
+    public List<Event> findByCategory(String category) throws SQLException {
         List<Event> events = new ArrayList<>();
-        String sql = "SELECT * FROM events WHERE category_id = ?";
+        String sql = "SELECT * FROM events WHERE category = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setInt(1, categoryId);
+            stmt.setString(1, category);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     events.add(mapResultSetToEvent(rs));
@@ -95,11 +93,11 @@ public class SQLEventDAO implements EventDAO {
     }
     
     @Override
-    public List<Event> findByVenue(int venueId) throws SQLException {
+    public List<Event> findByVenue(String venueName) throws SQLException {
         List<Event> events = new ArrayList<>();
-        String sql = "SELECT * FROM events WHERE venue_id = ?";
+        String sql = "SELECT * FROM events WHERE venue_name = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setInt(1, venueId);
+            stmt.setString(1, venueName);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     events.add(mapResultSetToEvent(rs));
@@ -112,7 +110,7 @@ public class SQLEventDAO implements EventDAO {
     @Override
     public List<Event> findUpcoming() throws SQLException {
         List<Event> events = new ArrayList<>();
-        String sql = "SELECT * FROM events WHERE start_date > NOW() AND status = 'APPROVED'";
+        String sql = "SELECT * FROM events WHERE event_date > NOW() AND status = 'APPROVED'";
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -125,7 +123,7 @@ public class SQLEventDAO implements EventDAO {
     @Override
     public List<Event> findPast() throws SQLException {
         List<Event> events = new ArrayList<>();
-        String sql = "SELECT * FROM events WHERE end_date < NOW()";
+        String sql = "SELECT * FROM events WHERE event_date < NOW()";
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -138,7 +136,7 @@ public class SQLEventDAO implements EventDAO {
     @Override
     public List<Event> findFeatured() throws SQLException {
         List<Event> events = new ArrayList<>();
-        String sql = "SELECT * FROM events WHERE featured = true AND status = 'APPROVED'";
+        String sql = "SELECT * FROM events WHERE status = 'APPROVED' ORDER BY event_date ASC LIMIT 5";
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -151,7 +149,7 @@ public class SQLEventDAO implements EventDAO {
     @Override
     public List<Event> findToday() throws SQLException {
         List<Event> events = new ArrayList<>();
-        String sql = "SELECT * FROM events WHERE DATE(start_date) = CURDATE()";
+        String sql = "SELECT * FROM events WHERE DATE(event_date) = CURDATE()";
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -164,7 +162,7 @@ public class SQLEventDAO implements EventDAO {
     @Override
     public List<Event> search(String query) throws SQLException {
         List<Event> events = new ArrayList<>();
-        String sql = "SELECT * FROM events WHERE name LIKE ? OR description LIKE ?";
+        String sql = "SELECT * FROM events WHERE title LIKE ? OR description LIKE ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             String searchPattern = "%" + query + "%";
             stmt.setString(1, searchPattern);
@@ -181,65 +179,74 @@ public class SQLEventDAO implements EventDAO {
     @Override
     public Event save(Event event) throws SQLException {
         String sql = "INSERT INTO events (title, description, event_date, registration_deadline, " +
-                    "venue_name, total_slots, available_slots, organizer_id, category_name, " +
-                    "eligibility_criteria, schedule, status, main_image_path, additional_document_paths) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "venue_name, total_slots, available_slots, " +
+                    "organizer_id, category, eligibility_criteria, contact_info, status, " +
+                    "main_image, main_image_type, additional_documents, additional_documents_type) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setString(1, event.getName());
-            stmt.setString(2, event.getDescription());
-            stmt.setTimestamp(3, Timestamp.valueOf(event.getStartDateTime()));
-            stmt.setTimestamp(4, Timestamp.valueOf(event.getEndDateTime()));
-            stmt.setString(5, event.getVenueName());
-            stmt.setInt(6, event.getCapacity());
-            stmt.setInt(7, event.getCapacity());
-            stmt.setInt(8, event.getOrganizer().getId());
-            stmt.setString(9, event.getCategoryName());
-            stmt.setString(10, event.getRequirements());
-            stmt.setString(11, ""); // schedule
-            stmt.setString(12, event.getStatus().name());
-            stmt.setString(13, event.getMainImagePath());
-            stmt.setString(14, event.getAdditionalDocumentPaths());
+            int paramIndex = 1;
+            stmt.setString(paramIndex++, event.getTitle());
+            stmt.setString(paramIndex++, event.getDescription());
+            stmt.setTimestamp(paramIndex++, Timestamp.valueOf(event.getEventDate()));
+            stmt.setTimestamp(paramIndex++, Timestamp.valueOf(event.getRegistrationDeadline()));
+            stmt.setString(paramIndex++, event.getVenueName());
+            stmt.setInt(paramIndex++, event.getTotalSlots());
+            stmt.setInt(paramIndex++, event.getAvailableSlots());
+            stmt.setInt(paramIndex++, event.getOrganizer().getId());
+            stmt.setString(paramIndex++, event.getCategory());
+            stmt.setString(paramIndex++, event.getEligibilityCriteria());
+            stmt.setString(paramIndex++, event.getContactInfo());
+            stmt.setString(paramIndex++, event.getStatus().name());
+            stmt.setBytes(paramIndex++, event.getMainImage());
+            stmt.setString(paramIndex++, event.getMainImageType());
+            stmt.setBytes(paramIndex++, event.getAdditionalDocuments());
+            stmt.setString(paramIndex++, event.getAdditionalDocumentsType());
             
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
                 throw new SQLException("Creating event failed, no rows affected.");
             }
-            
+
             try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     event.setId(generatedKeys.getInt(1));
-                    return event;
                 } else {
                     throw new SQLException("Creating event failed, no ID obtained.");
                 }
             }
+            
+            return event;
         }
     }
     
     @Override
     public Event update(Event event) throws SQLException {
         String sql = "UPDATE events SET title = ?, description = ?, event_date = ?, registration_deadline = ?, " +
-                    "venue_name = ?, total_slots = ?, available_slots = ?, organizer_id = ?, category_name = ?, " +
-                    "eligibility_criteria = ?, schedule = ?, status = ?, main_image_path = ?, additional_document_paths = ? " +
+                    "venue_name = ?, total_slots = ?, available_slots = ?, " +
+                    "organizer_id = ?, category = ?, eligibility_criteria = ?, contact_info = ?, status = ?, " +
+                    "main_image = ?, main_image_type = ?, additional_documents = ?, additional_documents_type = ? " +
                     "WHERE id = ?";
         
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, event.getName());
-            stmt.setString(2, event.getDescription());
-            stmt.setTimestamp(3, Timestamp.valueOf(event.getStartDateTime()));
-            stmt.setTimestamp(4, Timestamp.valueOf(event.getEndDateTime()));
-            stmt.setString(5, event.getVenueName());
-            stmt.setInt(6, event.getCapacity());
-            stmt.setInt(7, event.getCapacity());
-            stmt.setInt(8, event.getOrganizer().getId());
-            stmt.setString(9, event.getCategoryName());
-            stmt.setString(10, event.getRequirements());
-            stmt.setString(11, ""); // schedule
-            stmt.setString(12, event.getStatus().name());
-            stmt.setString(13, event.getMainImagePath());
-            stmt.setString(14, event.getAdditionalDocumentPaths());
-            stmt.setInt(15, event.getId());
+            int paramIndex = 1;
+            stmt.setString(paramIndex++, event.getTitle());
+            stmt.setString(paramIndex++, event.getDescription());
+            stmt.setTimestamp(paramIndex++, Timestamp.valueOf(event.getEventDate()));
+            stmt.setTimestamp(paramIndex++, Timestamp.valueOf(event.getRegistrationDeadline()));
+            stmt.setString(paramIndex++, event.getVenueName());
+            stmt.setInt(paramIndex++, event.getTotalSlots());
+            stmt.setInt(paramIndex++, event.getAvailableSlots());
+            stmt.setInt(paramIndex++, event.getOrganizer().getId());
+            stmt.setString(paramIndex++, event.getCategory());
+            stmt.setString(paramIndex++, event.getEligibilityCriteria());
+            stmt.setString(paramIndex++, event.getContactInfo());
+            stmt.setString(paramIndex++, event.getStatus().name());
+            stmt.setBytes(paramIndex++, event.getMainImage());
+            stmt.setString(paramIndex++, event.getMainImageType());
+            stmt.setBytes(paramIndex++, event.getAdditionalDocuments());
+            stmt.setString(paramIndex++, event.getAdditionalDocumentsType());
+            stmt.setInt(paramIndex++, event.getId());
             
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
@@ -259,39 +266,72 @@ public class SQLEventDAO implements EventDAO {
         }
     }
     
+    @Override
+    public int getTotalRegistrations() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM registrations";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+    
     private Event mapResultSetToEvent(ResultSet rs) throws SQLException {
         Event event = new Event();
         event.setId(rs.getInt("id"));
-        event.setName(rs.getString("title"));
+        event.setTitle(rs.getString("title"));
         event.setDescription(rs.getString("description"));
-        event.setStartDateTime(rs.getTimestamp("event_date").toLocalDateTime());
-        event.setEndDateTime(rs.getTimestamp("registration_deadline").toLocalDateTime());
-        event.setCapacity(rs.getInt("capacity"));
-        event.setRegisteredCount(rs.getInt("total_slots") - rs.getInt("available_slots"));
-        event.setStatus(EventStatus.valueOf(rs.getString("status")));
-        event.setRequirements(rs.getString("eligibility_criteria"));
-        event.setMainImagePath(rs.getString("main_image_path"));
-        event.setAdditionalDocumentPaths(rs.getString("additional_document_paths"));
-        event.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
-        event.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+        event.setCategory(rs.getString("category"));
+        event.setVenueName(rs.getString("venue_name"));
+        event.setContactInfo(rs.getString("contact_info"));
         
-        // Load related entities
-        String venueName = rs.getString("venue_name");
-        int organizerId = rs.getInt("organizer_id");
-        String categoryName = rs.getString("category_name");
+        // Handle potentially null timestamps
+        Timestamp eventDate = rs.getTimestamp("event_date");
+        if (eventDate != null) {
+            event.setEventDate(eventDate.toLocalDateTime());
+        }
         
-        // Load venue
-        event.setVenueName(venueName);
+        Timestamp regDeadline = rs.getTimestamp("registration_deadline");
+        if (regDeadline != null) {
+            event.setRegistrationDeadline(regDeadline.toLocalDateTime());
+        }
+        
+        event.setTotalSlots(rs.getInt("total_slots"));
+        event.setAvailableSlots(rs.getInt("available_slots"));
+        event.setEligibilityCriteria(rs.getString("eligibility_criteria"));
+        
+        String statusStr = rs.getString("status");
+        if (statusStr != null) {
+            event.setStatus(Event.EventStatus.valueOf(statusStr));
+        }
+        
+        event.setMainImage(rs.getBytes("main_image"));
+        event.setMainImageType(rs.getString("main_image_type"));
+        event.setAdditionalDocuments(rs.getBytes("additional_documents"));
+        event.setAdditionalDocumentsType(rs.getString("additional_documents_type"));
+        
+        // Handle potentially null timestamps
+        Timestamp createdAt = rs.getTimestamp("created_at");
+        if (createdAt != null) {
+            event.setCreatedAt(createdAt.toLocalDateTime());
+        }
+        
+        Timestamp updatedAt = rs.getTimestamp("updated_at");
+        if (updatedAt != null) {
+            event.setUpdatedAt(updatedAt.toLocalDateTime());
+        }
         
         // Load organizer
-        User organizer = userDAO.getUserById(organizerId);
-        if (organizer == null) {
-            throw new SQLException("Organizer not found for ID: " + organizerId);
+        int organizerId = rs.getInt("organizer_id");
+        try {
+            User organizer = userDAO.findById(organizerId);
+            event.setOrganizer(organizer);
+        } catch (SQLException e) {
+            // Log error but don't fail the entire event load
+            System.err.println("Error loading organizer for event " + event.getId() + ": " + e.getMessage());
         }
-        event.setOrganizer(organizer);
-        
-        // Load category
-        event.setCategoryName(categoryName);
         
         return event;
     }

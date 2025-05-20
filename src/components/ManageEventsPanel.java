@@ -73,7 +73,7 @@ public class ManageEventsPanel extends JPanel {
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 5; // Actions column
+                return column == 6; // Actions column
             }
         };
 
@@ -87,8 +87,8 @@ public class ManageEventsPanel extends JPanel {
         eventsTable.getColumnModel().getColumn(0).setWidth(0);
 
         // Add custom renderer and editor for Actions column
-        eventsTable.getColumnModel().getColumn(5).setCellRenderer(new ActionsRenderer());
-        eventsTable.getColumnModel().getColumn(5).setCellEditor(new ActionsEditor(eventsTable));
+        eventsTable.getColumnModel().getColumn(6).setCellRenderer(new ActionsRenderer());
+        eventsTable.getColumnModel().getColumn(6).setCellEditor(new ActionsEditor(eventsTable));
 
         JScrollPane scrollPane = new JScrollPane(eventsTable);
         scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
@@ -99,22 +99,16 @@ public class ManageEventsPanel extends JPanel {
 
     private void loadEventsData() {
         try {
-            tableModel.setRowCount(0); // Clear existing data
-            List<Event> events;
+            List<Event> events = eventController.getAllEvents();
+            tableModel.setRowCount(0);
 
-            if (userRole.equals("Admin")) {
-                events = eventController.getAllEvents();
-            } else { // Organizer
-                events = eventController.getEventsByOrganizer(organizerId);
-            }
-
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
             for (Event event : events) {
                 Object[] row = {
                     event.getId(),
-                    event.getName(),
-                    event.getStartDateTime().format(dateFormatter),
+                    event.getTitle(),
+                    event.getEventDate().format(dateFormatter),
                     event.getVenueName(),
                     event.getStatus().toString(),
                     "Actions"
@@ -123,7 +117,6 @@ public class ManageEventsPanel extends JPanel {
             }
         } catch (SQLException e) {
             UIUtils.showError(this, "Error loading events: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -182,7 +175,7 @@ public class ManageEventsPanel extends JPanel {
                 // TODO: Implement update action
                 System.out.println("Update clicked on row: " + clickedRow);
                 // Call the method in the parent panel to handle the update logic
-                ((ManageEventsPanel) SwingUtilities.getAncestorOfClass(ManageEventsPanel.class, table)).startUpdateAction(clickedRow);
+                ((ManageEventsPanel) SwingUtilities.getAncestorOfClass(ManageEventsPanel.class, table)).handleEditEvent(clickedRow);
                 fireEditingStopped();
             });
 
@@ -287,49 +280,36 @@ public class ManageEventsPanel extends JPanel {
     /**
      * Starts the update action for the event at the given row.
      */
-    private void startUpdateAction(int row) {
+    private void handleEditEvent(int row) {
         try {
-            int eventId = getEventId(row);
+            int eventId = (Integer) eventsTable.getModel().getValueAt(row, 0);
             Event event = eventController.getEvent(eventId);
-            if (event == null) {
-                UIUtils.showError(this, "Event not found.");
-                return;
+            if (event != null) {
+                showEditEventDialog(event);
             }
-
-            // Create a dialog with the CreateEventForm
-            JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Update Event", true);
-            dialog.setLayout(new BorderLayout());
-
-            // Create the form with the event data
-            CreateEventForm form = new CreateEventForm(userRole, success -> {
-                if (success) {
-                    loadEventsData(); // Refresh the table
-                }
-                dialog.dispose();
-            });
-
-            // Set the form data
-            form.setEventData(event);
-
-            dialog.add(form, BorderLayout.CENTER);
-            dialog.pack();
-            dialog.setLocationRelativeTo(this);
-            dialog.setVisible(true);
         } catch (SQLException e) {
-            UIUtils.showError(this, "Error updating event: " + e.getMessage());
-            e.printStackTrace();
+            UIUtils.showError(this, "Error loading event: " + e.getMessage());
         }
     }
 
-    // TODO: Create or adapt an event update form component
+    private void showEditEventDialog(Event event) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Edit Event", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(800, 700);
+        dialog.setLocationRelativeTo(this);
 
-    // TODO: Implement save logic in the update form
+        CreateEventForm form = new CreateEventForm(userRole, success -> {
+            if (success) {
+                loadEventsData(); // Refresh the table
+            }
+            dialog.dispose();
+        });
 
-    // TODO: Refresh table after successful update
+        // Set the form data
+        form.setEventData(event);
 
-    // Method to get the event ID for a given row
-    private int getEventId(int row) {
-        return (Integer) eventsTable.getModel().getValueAt(row, 0);
+        dialog.add(form, BorderLayout.CENTER);
+        dialog.setVisible(true);
     }
 
     /**

@@ -244,7 +244,6 @@ public class SQLUserDAO implements UserDAO {
         );
         user.setId(rs.getInt("id"));
         user.setPhone(rs.getString("phone"));
-        user.setStudentId(rs.getString("student_id"));
         user.setActive(rs.getBoolean("active"));
         user.setRegistrationDate(rs.getDate("registration_date").toString());
         user.setCreatedAt(rs.getTimestamp("created_at"));
@@ -271,6 +270,75 @@ public class SQLUserDAO implements UserDAO {
             return createUser(user.getName(), user.getEmail(), user.getPassword(), user.getRole(), user.getSecurityQuestion1(), user.getSecurityAnswer1(), user.getSecurityQuestion2(), user.getSecurityAnswer2());
         } else {
             return update(user);
+        }
+    }
+
+    @Override
+    public User findById(int id) throws SQLException {
+        String sql = "SELECT * FROM users WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                }
+                return null;
+            }
+        }
+    }
+
+    private User mapResultSetToUser(ResultSet rs) throws SQLException {
+        User user = new User();
+        user.setId(rs.getInt("id"));
+        user.setName(rs.getString("name"));
+        user.setEmail(rs.getString("email"));
+        user.setPassword(rs.getString("password"));
+        user.setPhone(rs.getString("phone"));
+        user.setRole(User.UserRole.valueOf(rs.getString("role")));
+        user.setActive(rs.getBoolean("is_active"));
+        user.setRegistrationDate(rs.getString("registration_date"));
+        
+        Timestamp lastLoginAt = rs.getTimestamp("last_login_at");
+        if (lastLoginAt != null) {
+            user.setLastLoginAt(new Date(lastLoginAt.getTime()));
+        }
+        
+        return user;
+    }
+
+    @Override
+    public List<User> findAll() throws SQLException {
+        String sql = "SELECT * FROM users";
+        List<User> users = new ArrayList<>();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                users.add(mapResultSetToUser(rs));
+            }
+        }
+        return users;
+    }
+
+    @Override
+    public void delete(int id) throws SQLException {
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public User getUserByEmail(String email) throws SQLException {
+        String sql = "SELECT * FROM users WHERE email = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, email);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                }
+                return null;
+            }
         }
     }
 } 

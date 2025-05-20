@@ -7,6 +7,12 @@ import java.util.regex.Pattern;
 public class ValidationUtils {
     private ValidationUtils() {}
 
+    private static final int MIN_PASSWORD_LENGTH = 8;
+    private static final Pattern HAS_UPPERCASE = Pattern.compile("[A-Z]");
+    private static final Pattern HAS_LOWERCASE = Pattern.compile("[a-z]");
+    private static final Pattern HAS_NUMBER = Pattern.compile("\\d");
+    private static final Pattern HAS_SPECIAL = Pattern.compile("[!@#$%^&*(),.?\":{}|<>]");
+
     // Email validation pattern (RFC 5322 compliant)
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
         "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
@@ -21,11 +27,6 @@ public class ValidationUtils {
     // Phone number validation pattern (international format)
     private static final Pattern PHONE_PATTERN = Pattern.compile(
         "^\\+?[1-9]\\d{1,14}$"
-    );
-
-    // Student ID validation pattern (alphanumeric, 5-20 chars)
-    private static final Pattern STUDENT_ID_PATTERN = Pattern.compile(
-        "^[a-zA-Z0-9]{5,20}$"
     );
 
     // Hex color validation pattern
@@ -65,13 +66,6 @@ public class ValidationUtils {
      */
     public static boolean isValidPhone(String phone) {
         return phone != null && PHONE_PATTERN.matcher(phone).matches();
-    }
-
-    /**
-     * Validates a student ID
-     */
-    public static boolean isValidStudentId(String studentId) {
-        return studentId != null && STUDENT_ID_PATTERN.matcher(studentId).matches();
     }
 
     /**
@@ -211,27 +205,6 @@ public class ValidationUtils {
     }
 
     /**
-     * Validates a student ID field and shows error if invalid
-     */
-    public static boolean validateStudentIdField(JTextField field, String fieldName, boolean required) {
-        String studentId = field.getText().trim();
-        
-        if (required && !isNotEmpty(studentId)) {
-            showValidationError(field, fieldName + " is required");
-            field.requestFocus();
-            return false;
-        }
-        
-        if (isNotEmpty(studentId) && !isValidStudentId(studentId)) {
-            showValidationError(field, "Invalid student ID format. Must be 5-20 alphanumeric characters");
-            field.requestFocus();
-            return false;
-        }
-        
-        return true;
-    }
-
-    /**
      * Check if a string is a valid hex color code
      */
     public static boolean isValidHexColor(String color) {
@@ -243,5 +216,21 @@ public class ValidationUtils {
      */
     public static boolean isValidZipCode(String zipCode) {
         return zipCode != null && ZIP_CODE_PATTERN.matcher(zipCode).matches();
+    }
+
+    /**
+     * Validates a phone number
+     * 
+     * @param phoneNumber The phone number to validate
+     * @return true if the phone number is valid, false otherwise
+     */
+    public static boolean isValidPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            return false;
+        }
+        // Remove any non-digit characters
+        String digitsOnly = phoneNumber.replaceAll("\\D", "");
+        // Check if it has exactly 10 digits
+        return digitsOnly.length() == 10;
     }
 } 

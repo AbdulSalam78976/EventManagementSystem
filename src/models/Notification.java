@@ -27,7 +27,8 @@ public class Notification {
         REGISTRATION_APPROVED,
         REGISTRATION_REJECTED,
         EVENT_REMINDER,
-        SYSTEM
+        SYSTEM,
+        ADMIN
     }
 
     // Default constructor

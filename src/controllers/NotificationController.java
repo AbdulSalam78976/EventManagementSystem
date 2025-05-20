@@ -205,14 +205,22 @@ public class NotificationController {
             throw new IllegalArgumentException("Notification type cannot be null");
         }
         
+        List<Registration> registrations = event.getRegistrations();
+        if (registrations.isEmpty()) {
+            return 0;
+        }
+        
         int count = 0;
-        for (Registration registration : event.getRegistrations()) {
-            try {
-                sendEventNotification(registration.getAttendee().getId(), title, message, type, event);
-                count++;
-            } catch (SQLException e) {
-                // Log error but continue with other recipients
-                System.err.println("Failed to send notification to user " + registration.getAttendee().getId() + ": " + e.getMessage());
+        for (Registration registration : registrations) {
+            if (registration.getStatus() == Registration.Status.REGISTERED) {
+                try {
+                    sendEventNotification(registration.getAttendee().getId(), title, message, type, event);
+                    count++;
+                } catch (SQLException e) {
+                    // Log error but continue with other recipients
+                    System.err.println("Failed to send notification to user " + 
+                        registration.getAttendee().getId() + ": " + e.getMessage());
+                }
             }
         }
         return count;
@@ -241,6 +249,7 @@ public class NotificationController {
         }
         
         notification.markAsRead();
+        notification.setReadAt(LocalDateTime.now());
         return notificationDAO.update(notification);
     }
     
@@ -386,12 +395,12 @@ public class NotificationController {
     }
     
     /**
-     * Send a reminder notification for an event
+     * Send a reminder notification for an upcoming event
      * 
-     * @param event The event to send a reminder for
-     * @param hoursBeforeEvent The number of hours before the event to send the reminder
-     * @throws IllegalArgumentException if the input is invalid
+     * @param event The event to send reminders for
+     * @param hoursBeforeEvent Number of hours before the event to send the reminder
      * @throws SQLException if a database error occurs
+     * @throws IllegalArgumentException if the event is null or hoursBeforeEvent is invalid
      */
     public void sendEventReminder(Event event, int hoursBeforeEvent) throws SQLException {
         if (event == null) {
@@ -402,15 +411,77 @@ public class NotificationController {
             throw new IllegalArgumentException("Hours before event must be positive");
         }
         
-        LocalDateTime reminderTime = event.getStartDateTime().minusHours(hoursBeforeEvent);
-        if (reminderTime.isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("Reminder time has already passed");
+        if (event.getEventDate().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Cannot send reminder for past event");
         }
         
-        String title = "Event Reminder: " + event.getName();
-        String message = String.format("This is a reminder that %s starts in %d hours.", 
-                                     event.getName(), hoursBeforeEvent);
+        // Calculate when to send the reminder
+        LocalDateTime reminderTime = event.getEventDate().minusHours(hoursBeforeEvent);
         
-        sendNotificationToEventParticipants(event, title, message, NotificationType.EVENT_REMINDER);
+        // Only send if the reminder time is in the future
+        if (reminderTime.isAfter(LocalDateTime.now())) {
+            return;
+        }
+        
+        // Create reminder message
+        String title = "Event Reminder: " + event.getTitle();
+        String message = String.format(
+            "This is a reminder that '%s' will start in %d hours at %s. " +
+            "Please make sure to arrive on time.",
+            event.getTitle(),
+            hoursBeforeEvent,
+            event.getVenueName()
+        );
+        
+        // Send notifications to all registered participants
+        List<Registration> registrations = event.getRegistrations();
+        if (registrations.isEmpty()) {
+            return;
+        }
+        
+        for (Registration registration : registrations) {
+            if (registration.getStatus() == Registration.Status.REGISTERED) {
+                try {
+                    sendEventNotification(
+                        registration.getAttendee().getId(),
+                        title,
+                        message,
+                        NotificationType.EVENT_REMINDER,
+                        event
+                    );
+                } catch (SQLException e) {
+                    // Log error but continue with other recipients
+                    System.err.println("Failed to send reminder to user " + 
+                        registration.getAttendee().getId() + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+    
+    public List<Notification> getRecentNotifications(int limit) throws SQLException {
+        List<Notification> all = notificationDAO.findAll();
+        return all.stream().limit(limit).collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
+     * Get recent admin notifications
+     * 
+     * @param limit Maximum number of notifications to return
+     * @return List of recent admin notifications as String arrays [action, details, time]
+     * @throws SQLException if a database error occurs
+     */
+    public List<String[]> getRecentAdminNotifications(int limit) throws SQLException {
+        List<Notification> notifications = notificationDAO.findAll().stream()
+            .filter(n -> n.getType() == NotificationType.ADMIN)
+            .limit(limit)
+            .collect(Collectors.toList());
+
+        return notifications.stream()
+            .map(n -> new String[]{
+                n.getTitle(),
+                n.getMessage(),
+                n.getCreatedAt().toString()
+            })
+            .collect(Collectors.toList());
     }
 }

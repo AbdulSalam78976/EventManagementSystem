@@ -2,6 +2,7 @@ package utils;
 
 import java.awt.Font;
 import java.awt.Dimension;
+import java.awt.Color;
 
 public class UIConstants {
     // Fonts
@@ -12,6 +13,7 @@ public class UIConstants {
     public static final Font BODY_FONT_BOLD = new Font("Segoe UI", Font.BOLD, 14);
     public static final Font SMALL_FONT = new Font("Segoe UI", Font.PLAIN, 12);
     public static final Font SMALL_FONT_BOLD = new Font("Segoe UI", Font.BOLD, 12);
+    public static final Font DASHBOARD_NUMBER_FONT = new Font("Segoe UI", Font.BOLD, 36);
 
     // Dimensions
     public static final Dimension BUTTON_SIZE = new Dimension(120, 40);
@@ -155,4 +157,7 @@ public class UIConstants {
     public static final String ICON_CALENDAR_LOCATION = "📅📍";
     public static final String ICON_CALENDAR_TIME = "📅⏰";
     public static final String ICON_CALENDAR_DATE = "📅📅";
+
+    // Colors
+    public static final Color LINK = new Color(41, 128, 185); // Blue link color
 } 

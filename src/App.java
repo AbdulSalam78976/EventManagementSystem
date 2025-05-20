@@ -4,12 +4,22 @@ import javax.swing.JOptionPane;
 import java.sql.SQLException;
 
 import screens.LoginScreen;
+import utils.NetworkUtils;
 
 /**
  * Main entry point for the Event Management System
  */
 public class App {
     public static void main(String[] args) {
+        // Check internet connection
+        if (!NetworkUtils.isInternetAvailable()) {
+            JOptionPane.showMessageDialog(null,
+                "No internet connection detected. Please check your connection and try again.",
+                "Network Error",
+                JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+
         try {
             // Set system look and feel
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

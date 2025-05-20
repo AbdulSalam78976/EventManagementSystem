@@ -9,6 +9,12 @@ import utils.*;
 
 public class EventCard extends RoundedPanel {
     private final Event event;
+    private JLabel titleLabel;
+    private JLabel dateLabel;
+    private JLabel venueLabel;
+    private JLabel slotsLabel;
+    private JLabel imageLabel;
+    private JButton viewButton;
 
     public EventCard(Event event) {
         super(new BorderLayout(15, 0), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
@@ -21,67 +27,99 @@ public class EventCard extends RoundedPanel {
         ));
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
 
-        // Event image placeholder
-        JPanel imagePanel = new JPanel();
-        imagePanel.setBackground(new Color(200, 200, 200));
-        imagePanel.setPreferredSize(new Dimension(150, 150));
-        add(imagePanel, BorderLayout.WEST);
+        initializeComponents();
+    }
 
-        // Event details
+    private void initializeComponents() {
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        setBackground(Color.WHITE);
+
+        // Title panel
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setOpaque(false);
+        titleLabel = new JLabel(event.getTitle());
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titlePanel.add(titleLabel, BorderLayout.CENTER);
+
+        // Date panel
+        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        datePanel.setOpaque(false);
+        dateLabel = new JLabel(event.getEventDate().toLocalDate().toString());
+        dateLabel.setIcon(new ImageIcon(getClass().getResource("/icons/calendar.png")));
+        datePanel.add(dateLabel);
+
+        // Venue panel
+        JPanel venuePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        venuePanel.setOpaque(false);
+        venueLabel = new JLabel(event.getVenueName());
+        venueLabel.setIcon(new ImageIcon(getClass().getResource("/icons/location.png")));
+        venuePanel.add(venueLabel);
+
+        // Slots panel
+        JPanel slotsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        slotsPanel.setOpaque(false);
+        slotsLabel = new JLabel("Available Slots: " + event.getTotalSlots());
+        slotsLabel.setIcon(new ImageIcon(getClass().getResource("/icons/users.png")));
+        slotsPanel.add(slotsLabel);
+
+        // Image panel
+        JPanel imagePanel = new JPanel(new BorderLayout());
+        imagePanel.setOpaque(false);
+        if (event.getMainImage() != null) {
+            ImageIcon icon = new ImageIcon(event.getMainImage());
+            Image image = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
+            imageLabel = new JLabel(new ImageIcon(image));
+        } else {
+            imageLabel = new JLabel("No image available");
+        }
+        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        imagePanel.add(imageLabel, BorderLayout.CENTER);
+
+        // Details panel
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setOpaque(false);
-
-        // Event title
-        JLabel titleLabel = new JLabel(event.getName());
-        titleLabel.setFont(UIConstants.HEADER_FONT);
-        titleLabel.setForeground(AppColors.TEXT_PRIMARY);
-        detailsPanel.add(titleLabel);
+        detailsPanel.add(titlePanel);
         detailsPanel.add(Box.createVerticalStrut(10));
-
-        // Event date and time
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy");
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("h:mm a");
-
-        JLabel dateLabel = new JLabel("📅 " + event.getStartDateTime().format(dateFormatter));
-        dateLabel.setFont(UIConstants.BODY_FONT);
-        detailsPanel.add(dateLabel);
+        detailsPanel.add(datePanel);
         detailsPanel.add(Box.createVerticalStrut(5));
-
-        JLabel timeLabel = new JLabel("🕒 " + event.getStartDateTime().format(timeFormatter) + " - " + event.getEndDateTime().format(timeFormatter));
-        timeLabel.setFont(UIConstants.BODY_FONT);
-        detailsPanel.add(timeLabel);
+        detailsPanel.add(venuePanel);
         detailsPanel.add(Box.createVerticalStrut(5));
+        detailsPanel.add(slotsPanel);
 
-        JLabel venueLabel = new JLabel("📍 " + event.getVenueName());
-        venueLabel.setFont(UIConstants.BODY_FONT);
-        detailsPanel.add(venueLabel);
-        detailsPanel.add(Box.createVerticalStrut(5));
+        // Main content panel
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 0));
+        contentPanel.setOpaque(false);
+        contentPanel.add(imagePanel, BorderLayout.WEST);
+        contentPanel.add(detailsPanel, BorderLayout.CENTER);
 
-        int availableSlots = event.getCapacity() - event.getRegisteredCount();
-        JLabel slotsLabel = new JLabel("👥 " + availableSlots + "/" + event.getCapacity() + " Slots Available");
-        slotsLabel.setFont(UIConstants.BODY_FONT);
-        detailsPanel.add(slotsLabel);
-        detailsPanel.add(Box.createVerticalStrut(10));
-
-        // Register button
-        JButton registerButton = UIUtils.createButton("REGISTER", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
-        registerButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        registerButton.setPreferredSize(new Dimension(120, 35));
-        registerButton.addActionListener(e -> handleRegistration());
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setOpaque(false);
-        buttonPanel.add(registerButton);
-        detailsPanel.add(buttonPanel);
+        viewButton = new JButton("View Details");
+        viewButton.addActionListener(e -> onViewDetails());
+        buttonPanel.add(viewButton);
 
-        add(detailsPanel, BorderLayout.CENTER);
+        add(contentPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
     }
 
     private void handleRegistration() {
         // TODO: Implement registration logic
         JOptionPane.showMessageDialog(this,
             "Registration functionality will be implemented soon.",
+            "Coming Soon",
+            JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void onViewDetails() {
+        // TODO: Implement view details logic
+        JOptionPane.showMessageDialog(this,
+            "View details functionality will be implemented soon.",
             "Coming Soon",
             JOptionPane.INFORMATION_MESSAGE);
     }
