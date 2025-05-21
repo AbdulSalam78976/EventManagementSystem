@@ -1,7 +1,6 @@
 package components;
 
 import models.Event;
-import models.User;
 import utils.UIUtils;
 import utils.AppColors;
 import utils.UIConstants;
@@ -14,8 +13,6 @@ import controllers.EventController;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
-import controllers.UserController;
-import java.util.List;
 
 public class EventDetailsPanel extends JPanel {
     private final Event event;
@@ -34,8 +31,6 @@ public class EventDetailsPanel extends JPanel {
     private JSpinner regDeadlineSpinner;
     private JSpinner slotsSpinner;
     private JTextArea eligibilityArea;
-    private JComboBox<User> organizerComboBox;
-    private List<User> allUsers;
 
     public EventDetailsPanel(Event event, ActionListener onEdit, ActionListener onApprove, ActionListener onReject, ActionListener onClose) {
         this.event = event;
@@ -55,11 +50,6 @@ public class EventDetailsPanel extends JPanel {
 
     private void initializeUI() {
         removeAll();
-        try {
-            allUsers = UserController.getInstance().getAllUsers();
-        } catch (Exception e) {
-            allUsers = java.util.Collections.emptyList();
-        }
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(Color.WHITE);
@@ -186,42 +176,18 @@ public class EventDetailsPanel extends JPanel {
         JPanel organizerGrid = new JPanel(new GridLayout(0, 2, 20, 10));
         organizerGrid.setOpaque(false);
         organizerGrid.setBorder(BorderFactory.createEmptyBorder(10, 15, 15, 15));
-        if (isEditing) {
-            organizerComboBox = new JComboBox<>(allUsers.toArray(new User[0]));
-            organizerComboBox.setRenderer(new DefaultListCellRenderer() {
-                @Override
-                public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                    super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                    if (value instanceof User) {
-                        User user = (User) value;
-                        setText(user.getName() + " (" + user.getRole() + ")");
-                    }
-                    return this;
-                }
-            });
-            // Pre-select current organizer if present
-            if (event.getOrganizer() != null) {
-                for (int i = 0; i < allUsers.size(); i++) {
-                    if (allUsers.get(i).getId() == event.getOrganizer().getId()) {
-                        organizerComboBox.setSelectedIndex(i);
-                        break;
-                    }
-                }
-            } else if (allUsers.size() > 0) {
-                organizerComboBox.setSelectedIndex(0);
-            }
-            addDetailField(organizerGrid, "Organizer:", organizerComboBox);
-        } else {
+        // Only show organizer information in view mode, not in edit mode
+        if (!isEditing) {
             if (event.getOrganizer() != null) {
                 addDetailField(organizerGrid, "Name:", event.getOrganizer().getName());
                 addDetailField(organizerGrid, "Email:", event.getOrganizer().getEmail());
                 addDetailField(organizerGrid, "Phone:", event.getOrganizer().getPhone());
             }
             addDetailField(organizerGrid, "Contact Info:", event.getContactInfo());
+            organizerPanel.add(organizerGrid, BorderLayout.CENTER);
+            mainPanel.add(organizerPanel);
+            mainPanel.add(Box.createVerticalStrut(15));
         }
-        organizerPanel.add(organizerGrid, BorderLayout.CENTER);
-        mainPanel.add(organizerPanel);
-        mainPanel.add(Box.createVerticalStrut(15));
 
         // Media Section (if available)
         if (event.getMainImage() != null || event.getAdditionalDocuments() != null) {
@@ -339,12 +305,6 @@ public class EventDetailsPanel extends JPanel {
             LocalDateTime eventDateLdt = newEventDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
             LocalDateTime regDeadlineLdt = newRegDeadline.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
 
-            if (organizerComboBox == null || organizerComboBox.getSelectedItem() == null) {
-                UIUtils.showError(this, "Please select an organizer.");
-                return;
-            }
-            User selectedOrganizer = (User) organizerComboBox.getSelectedItem();
-
             // Validation (basic)
             if (newTitle.isEmpty() || newDescription.isEmpty() || newCategory.isEmpty() || newVenue.isEmpty()) {
                 UIUtils.showError(this, "All fields are required.");
@@ -354,6 +314,7 @@ public class EventDetailsPanel extends JPanel {
                 UIUtils.showError(this, "Registration deadline must be before event date.");
                 return;
             }
+
             // Update event object
             event.setTitle(newTitle);
             event.setDescription(newDescription);
@@ -363,10 +324,19 @@ public class EventDetailsPanel extends JPanel {
             event.setEligibilityCriteria(newEligibility);
             event.setEventDate(eventDateLdt);
             event.setRegistrationDeadline(regDeadlineLdt);
-            event.setOrganizer(selectedOrganizer);
+            // Keep the original organizer - don't change it
             // Save to DB
             EventController.getInstance().updateEvent(event);
-            UIUtils.showSuccess(this, "Event updated successfully.");
+
+            // Show a clear success message that changes have been made
+            JOptionPane.showMessageDialog(
+                this,
+                "Event details have been successfully updated!",
+                "Changes Saved",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+
+            UIUtils.showSuccess(this, "Event details updated successfully.");
             isEditing = false;
             initializeUI();
         } catch (Exception ex) {
@@ -411,4 +381,4 @@ public class EventDetailsPanel extends JPanel {
                 return AppColors.TEXT_PRIMARY;
         }
     }
-} 
+}

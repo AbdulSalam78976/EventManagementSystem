@@ -39,7 +39,7 @@ public class ProfilePanel extends JPanel {
 
     /**
      * Creates a new profile panel
-     * 
+     *
      * @param user The user object
      * @param editable Whether the panel is editable
      * @param onProfileUpdate Callback when profile is updated
@@ -48,7 +48,7 @@ public class ProfilePanel extends JPanel {
         this.currentUser = user;
         this.editable = editable;
         this.onProfileUpdate = onProfileUpdate;
-        
+
         setLayout(new BorderLayout(20, 20));
         setBackground(AppColors.BACKGROUND);
         setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
@@ -67,11 +67,11 @@ public class ProfilePanel extends JPanel {
         // Header Panel with gradient background
         RoundedPanel headerPanel = new RoundedPanel(new BorderLayout(15, 15), AppColors.PRIMARY_LIGHT, UIConstants.CORNER_RADIUS_LARGE);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
-        
+
         // User info in header
         JPanel userInfoPanel = new JPanel(new BorderLayout(10, 5));
         userInfoPanel.setOpaque(false);
-        
+
         // --- Avatar with initials ---
         JPanel avatarPanel = new JPanel() {
             @Override
@@ -96,7 +96,7 @@ public class ProfilePanel extends JPanel {
         avatarPanel.setPreferredSize(new Dimension(60, 60));
         avatarPanel.setOpaque(false);
         userInfoPanel.add(avatarPanel, BorderLayout.WEST);
-        
+
         // User name and role
         JPanel nameRolePanel = new JPanel();
         nameRolePanel.setLayout(new BoxLayout(nameRolePanel, BoxLayout.Y_AXIS));
@@ -106,17 +106,17 @@ public class ProfilePanel extends JPanel {
         nameRolePanel.add(nameLabel);
         nameRolePanel.add(roleLabel);
         userInfoPanel.add(nameRolePanel, BorderLayout.CENTER);
-        
+
         headerPanel.add(userInfoPanel, BorderLayout.WEST);
-        
+
         if (editable) {
-            editButton = UIUtils.createButton(isEditing ? "Save Changes" : "Edit Profile", 
+            editButton = UIUtils.createButton(isEditing ? "Save Changes" : "Edit Profile",
                 "edit", UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.LARGE);
             editButton.setFont(UIConstants.BODY_FONT_BOLD);
             editButton.addActionListener(e -> toggleEditMode(editButton));
             headerPanel.add(editButton, BorderLayout.EAST);
         }
-        
+
         add(headerPanel, BorderLayout.NORTH);
 
         // Main content with tabs
@@ -144,12 +144,12 @@ public class ProfilePanel extends JPanel {
         tabbedPane.setFont(UIConstants.BODY_FONT_BOLD);
         tabbedPane.setBackground(new Color(250, 250, 252));
         tabbedPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
+
         tabbedPane.addTab("Basic Information", createBasicInfoPanel());
         if (editable) {
             tabbedPane.addTab("Change Password", createPasswordPanel());
         }
-        
+
         add(tabbedPane, BorderLayout.CENTER);
     }
 
@@ -268,7 +268,24 @@ public class ProfilePanel extends JPanel {
             String currentPassword = new String(currentPasswordField.getPassword());
             String newPassword = new String(newPasswordField.getPassword());
             String confirmPassword = new String(confirmPasswordField.getPassword());
-            updatePassword(currentPassword, newPassword, confirmPassword);
+            if (updatePassword(currentPassword, newPassword, confirmPassword)) {
+                try {
+                    // Save to database
+                    AuthController.getInstance().updateUser(currentUser);
+
+                    // Show success message in dialog box
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Your password has been successfully changed!",
+                        "Password Changed",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+
+                    showSuccess("Password changed successfully");
+                } catch (SQLException ex) {
+                    showError("Failed to update password in database: " + ex.getMessage());
+                }
+            }
         });
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setOpaque(false);
@@ -347,22 +364,40 @@ public class ProfilePanel extends JPanel {
             String name = nameField.getText().trim();
             String email = emailField.getText().trim();
             String phone = phoneField.getText().trim();
-            
+
             if (name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
                 showError("All fields are required");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Please fill in all required fields.",
+                    "Required Fields",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return;
             }
-            
+
             if (!ValidationUtils.isValidEmail(email)) {
                 showError("Please enter a valid email address");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "The email address you entered is not valid. Please enter a valid email address.",
+                    "Invalid Email",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return;
             }
-            
+
             if (!ValidationUtils.isValidPhoneNumber(phone)) {
                 showError("Please enter a valid phone number");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "The phone number you entered is not valid. Please enter a valid phone number.",
+                    "Invalid Phone Number",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return;
             }
-            
+
             // Check if password fields are filled
             String currentPassword = currentPasswordField != null ? new String(currentPasswordField.getPassword()) : "";
             String newPassword = newPasswordField != null ? new String(newPasswordField.getPassword()) : "";
@@ -383,20 +418,41 @@ public class ProfilePanel extends JPanel {
             // Save to database
             try {
                 AuthController.getInstance().updateUser(currentUser);
+
+                // Show success message in dialog box
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Your profile has been successfully updated!",
+                    "Profile Updated",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+
                 showSuccess("Profile updated successfully");
                 isEditing = false;
                 refreshUI();
-                
+
                 // Notify callback if provided
                 if (onProfileUpdate != null) {
                     onProfileUpdate.accept(currentUser);
                 }
             } catch (SQLException e) {
                 showError("Failed to update profile in database: " + e.getMessage());
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to update your profile: " + e.getMessage(),
+                    "Database Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return;
             }
         } catch (Exception e) {
             showError("Error updating profile: " + e.getMessage());
+            JOptionPane.showMessageDialog(
+                this,
+                "An error occurred while updating your profile: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -404,6 +460,12 @@ public class ProfilePanel extends JPanel {
         try {
             if (currentPassword.isEmpty()) {
                 showError("Current password is required to change password");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter your current password.",
+                    "Password Required",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return false;
             }
 
@@ -411,35 +473,68 @@ public class ProfilePanel extends JPanel {
             SecurityUtils.VerificationResult verificationResult = SecurityUtils.verifyPassword(currentPassword, currentUser.getPassword());
             if (!verificationResult.isSuccess()) {
                 showError("Current password is incorrect");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "The current password you entered is incorrect. Please try again.",
+                    "Incorrect Password",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return false;
             }
 
             if (newPassword.isEmpty() || confirmPassword.isEmpty()) {
                 showError("New password and confirmation are required");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter both new password and confirmation.",
+                    "Password Required",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return false;
             }
 
             if (!newPassword.equals(confirmPassword)) {
                 showError("New passwords do not match");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "The new passwords you entered do not match. Please make sure both fields contain the same password.",
+                    "Passwords Don't Match",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return false;
             }
 
             if (!ValidationUtils.isValidPassword(newPassword)) {
                 showError("New password does not meet requirements");
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Your new password does not meet the requirements.\n" +
+                    "• Minimum 8 characters\n" +
+                    "• At least one uppercase letter\n" +
+                    "• At least one lowercase letter",
+                    "Invalid Password",
+                    JOptionPane.ERROR_MESSAGE
+                );
                 return false;
             }
 
             // Update password in user object
             currentUser.setPassword(SecurityUtils.hashPassword(newPassword));
-            
+
             // Clear password fields
             currentPasswordField.setText("");
             newPasswordField.setText("");
             confirmPasswordField.setText("");
-            
+
             return true;
         } catch (Exception e) {
             showError("Error changing password: " + e.getMessage());
+            JOptionPane.showMessageDialog(
+                this,
+                "An error occurred while changing your password: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+            );
             return false;
         }
     }
@@ -457,10 +552,10 @@ public class ProfilePanel extends JPanel {
     private void refreshUI() {
         // Remove all components
         removeAll();
-        
+
         // Rebuild UI
         setupUI();
-        
+
         // Refresh the panel
         revalidate();
         repaint();

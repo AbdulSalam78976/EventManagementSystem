@@ -17,20 +17,20 @@ import java.util.stream.Collectors;
  * Controller class for handling event-related operations
  */
 public class EventController {
-    
+
     private static EventController instance;
     private final EventDAO eventDAO;
     private final UserDAO userDAO;
-    
+
     // Private constructor for singleton pattern
     private EventController() throws SQLException {
         this.eventDAO = new SQLEventDAO();
         this.userDAO = new SQLUserDAO();
     }
-    
+
     /**
      * Get the singleton instance of the EventController
-     * 
+     *
      * @return The EventController instance
      * @throws SQLException if a database error occurs during initialization
      */
@@ -40,10 +40,10 @@ public class EventController {
         }
         return instance;
     }
-    
+
     /**
      * Create a new event
-     * 
+     *
      * @param title Event title
      * @param description Event description
      * @param eventDate Event date and time
@@ -98,23 +98,23 @@ public class EventController {
         if (!ValidationUtils.isNotEmpty(category)) {
             throw new IllegalArgumentException("Event category is required");
         }
-        
+
         // Create event
         Event event = new Event(title, description, eventDate, registrationDeadline,
                               venueName, totalSlots, organizer, category);
-        
+
         // Set additional fields
         event.setMainImage(mainImage);
         event.setMainImageType(mainImageType);
         event.setAdditionalDocuments(additionalDocuments);
         event.setAdditionalDocumentsType(additionalDocumentsType);
-        
+
         return eventDAO.save(event);
     }
-    
+
     /**
      * Update an existing event
-     * 
+     *
      * @param id Event ID
      * @param title Event title
      * @param description Event description
@@ -161,13 +161,13 @@ public class EventController {
         if (!ValidationUtils.isNotEmpty(category)) {
             throw new IllegalArgumentException("Event category is required");
         }
-        
+
         // Get existing event
         Event event = eventDAO.findById(id);
         if (event == null) {
             throw new IllegalArgumentException("Event not found");
         }
-        
+
         // Update event
         event.setTitle(title);
         event.setDescription(description);
@@ -181,42 +181,42 @@ public class EventController {
         event.setMainImageType(mainImageType);
         event.setAdditionalDocuments(additionalDocuments);
         event.setAdditionalDocumentsType(additionalDocumentsType);
-        
+
         return eventDAO.update(event);
     }
-    
+
     /**
      * Delete an event
-     * 
+     *
      * @param id The ID of the event to delete
      * @return true if the event was deleted, false otherwise
      */
     public boolean deleteEvent(int id) throws SQLException {
         return eventDAO.delete(id);
     }
-    
+
     /**
      * Get an event by ID
-     * 
+     *
      * @param id The ID of the event to get
      * @return The event, or null if not found
      */
     public Event getEvent(int id) throws SQLException {
         return eventDAO.findById(id);
     }
-    
+
     /**
      * Get all events
-     * 
+     *
      * @return A list of all events
      */
     public List<Event> getAllEvents() throws SQLException {
         return eventDAO.findAll();
     }
-    
+
     /**
      * Get events by category
-     * 
+     *
      * @param category Category name
      * @return List of events in the specified category
      */
@@ -225,10 +225,10 @@ public class EventController {
                 .filter(event -> event.getCategory().equals(category))
             .collect(Collectors.toList());
     }
-    
+
     /**
      * Get events by venue name
-     * 
+     *
      * @param venueName The name of the venue
      * @return A list of events at the specified venue
      */
@@ -240,48 +240,48 @@ public class EventController {
                 .filter(event -> event.getVenueName().equalsIgnoreCase(venueName.trim()))
             .collect(Collectors.toList());
     }
-    
+
     /**
      * Get events by organizer
-     * 
+     *
      * @param organizerId Organizer ID
      * @return List of events organized by the specified user
      */
     public List<Event> getEventsByOrganizer(int organizerId) throws SQLException {
         return eventDAO.findByOrganizer(organizerId);
     }
-    
+
     /**
      * Get events by status
-     * 
+     *
      * @param status The status to filter by
      * @return A list of events with the specified status
      */
     public List<Event> getEventsByStatus(EventStatus status) throws SQLException {
         return eventDAO.findByStatus(status);
     }
-    
+
     /**
      * Get upcoming events
-     * 
+     *
      * @return A list of upcoming events
      */
     public List<Event> getUpcomingEvents() throws SQLException {
         return eventDAO.findUpcoming();
     }
-    
+
     /**
      * Get past events
-     * 
+     *
      * @return A list of past events
      */
     public List<Event> getPastEvents() throws SQLException {
         return eventDAO.findPast();
     }
-    
+
     /**
      * Approve an event
-     * 
+     *
      * @param eventId The ID of the event to approve
      * @return The approved event
      */
@@ -296,10 +296,10 @@ public class EventController {
         event.setStatus(EventStatus.APPROVED);
         return eventDAO.update(event);
     }
-    
+
     /**
      * Reject an event
-     * 
+     *
      * @param eventId The ID of the event to reject
      * @return The rejected event
      */
@@ -314,10 +314,10 @@ public class EventController {
         event.setStatus(EventStatus.REJECTED);
         return eventDAO.update(event);
     }
-    
+
     /**
      * Cancel an event
-     * 
+     *
      * @param eventId The ID of the event to cancel
      * @return The cancelled event
      */
@@ -332,29 +332,29 @@ public class EventController {
         event.setStatus(EventStatus.CANCELLED);
         return eventDAO.update(event);
     }
-    
+
     /**
      * Search events by title or description
-     * 
+     *
      * @param query The search query
      * @return A list of matching events
      */
     public List<Event> searchEvents(String query) throws SQLException {
         return eventDAO.search(query);
     }
-    
+
     /**
      * Get total number of events
-     * 
+     *
      * @return The total number of events
      */
     public int getTotalEvents() throws SQLException {
         return eventDAO.findAll().size();
     }
-    
+
     /**
      * Get active events (approved and upcoming)
-     * 
+     *
      * @return A list of active events
      */
     public List<Event> getActiveEvents() throws SQLException {
@@ -362,28 +362,28 @@ public class EventController {
                 .filter(event -> event.getStatus() == EventStatus.APPROVED && event.isUpcoming())
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * Get total number of registrations across all events
-     * 
+     *
      * @return The total number of registrations
      */
     public int getTotalRegistrations() throws SQLException {
         return eventDAO.getTotalRegistrations();
     }
-    
+
     /**
      * Get today's events
-     * 
+     *
      * @return A list of today's events
      */
     public List<Event> getTodaysEvents() throws SQLException {
         return eventDAO.findToday();
     }
-    
+
     /**
      * Update event status
-     * 
+     *
      * @param event The event to update
      * @return The updated event
      * @throws SQLException if a database error occurs
@@ -392,12 +392,15 @@ public class EventController {
         if (event == null) {
             throw new IllegalArgumentException("Event cannot be null");
         }
-        
+
         Event existingEvent = eventDAO.findById(event.getId());
         if (existingEvent == null) {
             throw new IllegalArgumentException("Event not found");
         }
-        
+
+        // Preserve the original organizer
+        event.setOrganizer(existingEvent.getOrganizer());
+
         return eventDAO.update(event);
     }
 }
