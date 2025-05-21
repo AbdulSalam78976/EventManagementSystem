@@ -22,8 +22,13 @@ public class DatabaseConnection {
             try {
                 // Load database properties
                 Properties props = new Properties();
-                FileInputStream fis = new FileInputStream("database.properties");
-                props.load(fis);
+                // Use class loader to find the properties file
+                try (var inputStream = DatabaseConnection.class.getClassLoader().getResourceAsStream("database.properties")) {
+                    if (inputStream == null) {
+                        throw new SQLException("database.properties file not found in classpath");
+                    }
+                    props.load(inputStream);
+                }
 
                 // Get database connection properties
                 String url = props.getProperty("db.url");

@@ -14,14 +14,15 @@ import utils.SecurityUtils;
 import utils.IconUtils;
 import controllers.AuthController;
 import controllers.SessionManager;
+import java.util.function.Consumer;
+import java.awt.geom.Ellipse2D;
 
 /**
- * A panel for displaying user profile information with inline editing capabilities
+ * A reusable panel for displaying and editing user profile information
  */
 public class ProfilePanel extends JPanel {
     private final User currentUser;
     private final boolean editable;
-    
     private JTextField nameField;
     private JTextField emailField;
     private JTextField phoneField;
@@ -34,22 +35,32 @@ public class ProfilePanel extends JPanel {
     private JPanel formPanel;
     private JTabbedPane tabbedPane;
     private JButton editButton;
-    
+    private Consumer<User> onProfileUpdate;
+
     /**
      * Creates a new profile panel
      * 
      * @param user The user object
      * @param editable Whether the panel is editable
+     * @param onProfileUpdate Callback when profile is updated
      */
-    public ProfilePanel(User user, boolean editable) {
+    public ProfilePanel(User user, boolean editable, Consumer<User> onProfileUpdate) {
         this.currentUser = user;
         this.editable = editable;
+        this.onProfileUpdate = onProfileUpdate;
         
         setLayout(new BorderLayout(20, 20));
         setBackground(AppColors.BACKGROUND);
         setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
         setupUI();
+    }
+
+    /**
+     * Creates a new profile panel without update callback
+     */
+    public ProfilePanel(User user, boolean editable) {
+        this(user, editable, null);
     }
 
     private void setupUI() {
@@ -61,12 +72,40 @@ public class ProfilePanel extends JPanel {
         JPanel userInfoPanel = new JPanel(new BorderLayout(10, 5));
         userInfoPanel.setOpaque(false);
         
+        // --- Avatar with initials ---
+        JPanel avatarPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                int size = 60;
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(AppColors.PRIMARY_DARK);
+                g2.fill(new Ellipse2D.Double(0, 0, size, size));
+                g2.setColor(Color.WHITE);
+                String initials = getInitials(currentUser.getName());
+                Font font = UIConstants.HEADER_FONT.deriveFont(Font.BOLD, 28f);
+                g2.setFont(font);
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (size - fm.stringWidth(initials)) / 2;
+                int y = (size - fm.getHeight()) / 2 + fm.getAscent();
+                g2.drawString(initials, x, y);
+                g2.dispose();
+            }
+        };
+        avatarPanel.setPreferredSize(new Dimension(60, 60));
+        avatarPanel.setOpaque(false);
+        userInfoPanel.add(avatarPanel, BorderLayout.WEST);
+        
         // User name and role
+        JPanel nameRolePanel = new JPanel();
+        nameRolePanel.setLayout(new BoxLayout(nameRolePanel, BoxLayout.Y_AXIS));
+        nameRolePanel.setOpaque(false);
         JLabel nameLabel = UIUtils.createLabel(currentUser.getName(), UIConstants.HEADER_FONT, AppColors.TEXT_PRIMARY);
         JLabel roleLabel = UIUtils.createLabel(currentUser.getRole().getDisplayName(), UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
-        
-        userInfoPanel.add(nameLabel, BorderLayout.NORTH);
-        userInfoPanel.add(roleLabel, BorderLayout.CENTER);
+        nameRolePanel.add(nameLabel);
+        nameRolePanel.add(roleLabel);
+        userInfoPanel.add(nameRolePanel, BorderLayout.CENTER);
         
         headerPanel.add(userInfoPanel, BorderLayout.WEST);
         
@@ -81,47 +120,41 @@ public class ProfilePanel extends JPanel {
         add(headerPanel, BorderLayout.NORTH);
 
         // Main content with tabs
-        tabbedPane = new JTabbedPane();
+        tabbedPane = new JTabbedPane() {
+            @Override
+            public void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                // Highlight active tab
+                int idx = getSelectedIndex();
+                if (idx >= 0) {
+                    Rectangle rect = getBoundsAt(idx);
+                    g.setColor(AppColors.PRIMARY_DARK);
+                    g.fillRect(rect.x, rect.y, rect.width, rect.height);
+                    // Draw the tab text in white
+                    String title = getTitleAt(idx);
+                    FontMetrics fm = g.getFontMetrics(getFont());
+                    int textX = rect.x + (rect.width - fm.stringWidth(title)) / 2;
+                    int textY = rect.y + ((rect.height - fm.getHeight()) / 2) + fm.getAscent();
+                    g.setColor(Color.WHITE);
+                    g.setFont(getFont());
+                    g.drawString(title, textX, textY);
+                }
+            }
+        };
         tabbedPane.setFont(UIConstants.BODY_FONT_BOLD);
-        tabbedPane.setBackground(Color.WHITE);
-        tabbedPane.setBorder(null);
-        
-        // Custom tab styling
-        UIManager.put("TabbedPane.selected", AppColors.PRIMARY_LIGHT);
-        UIManager.put("TabbedPane.contentAreaColor", Color.WHITE);
-        UIManager.put("TabbedPane.shadow", Color.WHITE);
+        tabbedPane.setBackground(new Color(250, 250, 252));
+        tabbedPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         tabbedPane.addTab("Basic Information", createBasicInfoPanel());
-        tabbedPane.addTab("Security", createSecurityPanel());
+        if (editable) {
+            tabbedPane.addTab("Change Password", createPasswordPanel());
+        }
         
-        // Add some padding around the tabbed pane
-        JPanel tabbedPaneWrapper = new JPanel(new BorderLayout());
-        tabbedPaneWrapper.setBackground(AppColors.BACKGROUND);
-        tabbedPaneWrapper.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
-        tabbedPaneWrapper.add(tabbedPane, BorderLayout.CENTER);
-        
-        add(tabbedPaneWrapper, BorderLayout.CENTER);
-
-        // Status Panel
-        JPanel statusPanel = new JPanel(new BorderLayout(10, 0));
-        statusPanel.setBackground(AppColors.BACKGROUND);
-        statusPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
-        
-        errorLabel = UIUtils.createLabel("", UIConstants.SMALL_FONT_BOLD, AppColors.ERROR);
-        successLabel = UIUtils.createLabel("", UIConstants.SMALL_FONT_BOLD, AppColors.SUCCESS);
-        
-        JPanel messagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        messagePanel.setOpaque(false);
-        messagePanel.add(errorLabel);
-        messagePanel.add(successLabel);
-        
-        statusPanel.add(messagePanel, BorderLayout.WEST);
-        
-        add(statusPanel, BorderLayout.SOUTH);
+        add(tabbedPane, BorderLayout.CENTER);
     }
 
     private JPanel createBasicInfoPanel() {
-        RoundedPanel panel = new RoundedPanel(new BorderLayout(20, 20), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+        RoundedPanel panel = new RoundedPanel(new BorderLayout(20, 20), new Color(248, 250, 255), UIConstants.CORNER_RADIUS_MEDIUM);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         formPanel = new JPanel(new GridBagLayout());
@@ -132,10 +165,18 @@ public class ProfilePanel extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5, 0, 15, 0);
 
+        // --- Section Heading ---
+        JLabel sectionHeading = UIUtils.createLabel("Personal Information", UIConstants.BODY_FONT_BOLD, AppColors.PRIMARY_DARK);
+        sectionHeading.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        formPanel.add(sectionHeading, gbc);
+
         // Create fields
         nameField = UIUtils.createRoundedTextField();
         emailField = UIUtils.createRoundedTextField();
         phoneField = UIUtils.createRoundedTextField();
+        nameField.setToolTipText("Enter your full name");
+        emailField.setToolTipText("Enter your email address");
+        phoneField.setToolTipText("Enter your phone number");
 
         // Set initial values
         nameField.setText(currentUser.getName());
@@ -156,138 +197,132 @@ public class ProfilePanel extends JPanel {
         // Add non-editable fields with icons
         addDetailFieldWithIcon(formPanel, gbc, "Role", currentUser.getRole().getDisplayName(), "role");
         addDetailFieldWithIcon(formPanel, gbc, "Registration Date", currentUser.getRegistrationDate(), "calendar");
-        addDetailFieldWithIcon(formPanel, gbc, "Last Login", 
-            currentUser.getLastLoginAt() != null ? 
-            new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(currentUser.getLastLoginAt()) : "Never",
-            "clock");
 
+        // Add status labels
+        errorLabel = UIUtils.createLabel("", UIConstants.SMALL_FONT, AppColors.ERROR);
+        successLabel = UIUtils.createLabel("", UIConstants.SMALL_FONT, AppColors.SUCCESS);
+        gbc.insets = new Insets(10, 0, 0, 0);
+        formPanel.add(errorLabel, gbc);
+        formPanel.add(successLabel, gbc);
+
+        // Wrap formPanel in a scroll pane
         JScrollPane scrollPane = new JScrollPane(formPanel);
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
-        
+
         panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
-    
-    private JPanel createSecurityPanel() {
-        RoundedPanel panel = new RoundedPanel(new BorderLayout(20, 20), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+
+    private JPanel createPasswordPanel() {
+        RoundedPanel panel = new RoundedPanel(new BorderLayout(20, 20), new Color(248, 250, 255), UIConstants.CORNER_RADIUS_MEDIUM);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JPanel securityForm = new JPanel(new GridBagLayout());
-        securityForm.setOpaque(false);
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5, 0, 15, 0);
 
-        if (isEditing) {
-            // Password fields
-            currentPasswordField = UIUtils.createRoundedPasswordField();
-            newPasswordField = UIUtils.createRoundedPasswordField();
-            confirmPasswordField = UIUtils.createRoundedPasswordField();
+        // --- Section Heading ---
+        JLabel sectionHeading = UIUtils.createLabel("Change Password", UIConstants.BODY_FONT_BOLD, AppColors.PRIMARY_DARK);
+        sectionHeading.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        formPanel.add(sectionHeading, gbc);
 
-            addEditableFieldWithIcon(securityForm, gbc, "Current Password", currentPasswordField, "lock");
-            addEditableFieldWithIcon(securityForm, gbc, "New Password", newPasswordField, "lock");
-            addEditableFieldWithIcon(securityForm, gbc, "Confirm New Password", confirmPasswordField, "lock");
-        
+        // Create password fields
+        currentPasswordField = UIUtils.createRoundedPasswordField();
+        newPasswordField = UIUtils.createRoundedPasswordField();
+        confirmPasswordField = UIUtils.createRoundedPasswordField();
+        currentPasswordField.setToolTipText("Enter your current password");
+        newPasswordField.setToolTipText("Enter a new password");
+        confirmPasswordField.setToolTipText("Re-enter the new password");
+
+        // Add fields to panel
+        addEditableFieldWithIcon(formPanel, gbc, "Current Password", currentPasswordField, "lock");
+        addEditableFieldWithIcon(formPanel, gbc, "New Password", newPasswordField, "key");
+        addEditableFieldWithIcon(formPanel, gbc, "Confirm New Password", confirmPasswordField, "key");
+
         // Password requirements
-            JTextArea requirementsArea = new JTextArea(
-                "Password Requirements:\n" +
-                "• Minimum 8 characters\n" +
-                "• At least one uppercase letter\n" +
-                "• At least one lowercase letter\n" +
-                "• At least one number\n" +
-                "• At least one special character"
-            );
-            requirementsArea.setEditable(false);
-            requirementsArea.setBackground(AppColors.BACKGROUND_LIGHT);
-            requirementsArea.setFont(UIConstants.SMALL_FONT);
-            requirementsArea.setForeground(AppColors.TEXT_SECONDARY);
-            requirementsArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-            
-            gbc.insets = new Insets(20, 0, 20, 0);
-            securityForm.add(requirementsArea, gbc);
+        JTextArea requirementsArea = new JTextArea(
+            "Password Requirements:\n" +
+            "• Minimum 8 characters\n" +
+            "• At least one uppercase letter\n" +
+            "• At least one lowercase letter"
+        );
+        requirementsArea.setEditable(false);
+        requirementsArea.setBackground(new Color(0,0,0,0));
+        requirementsArea.setFont(UIConstants.SMALL_FONT);
+        requirementsArea.setForeground(AppColors.TEXT_SECONDARY);
+        requirementsArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        requirementsArea.setToolTipText("Your password must meet these requirements.");
+        gbc.insets = new Insets(10, 0, 10, 0);
+        formPanel.add(requirementsArea, gbc);
 
-            // Change password button
-            JButton changePasswordButton = UIUtils.createButton("Change Password", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
-            changePasswordButton.addActionListener(e -> changePassword());
-        
+        // Change Password button
+        JButton changePasswordButton = UIUtils.createButton("Change Password", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
+        changePasswordButton.addActionListener(e -> {
+            // Only update password, not other fields
+            String currentPassword = new String(currentPasswordField.getPassword());
+            String newPassword = new String(newPasswordField.getPassword());
+            String confirmPassword = new String(confirmPasswordField.getPassword());
+            updatePassword(currentPassword, newPassword, confirmPassword);
+        });
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setOpaque(false);
-            buttonPanel.add(changePasswordButton);
-            
-        panel.add(buttonPanel, BorderLayout.SOUTH);
-        } else {
-            addDetailFieldWithIcon(securityForm, gbc, "Password", "••••••••", "lock");
-        }
-        
-        panel.add(securityForm, BorderLayout.CENTER);
+        buttonPanel.add(changePasswordButton);
+        gbc.insets = new Insets(10, 0, 0, 0);
+        formPanel.add(buttonPanel, gbc);
+
+        // Add scroll pane for the form
+        JScrollPane scrollPane = new JScrollPane(formPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
-    
-    private void addDetailFieldWithIcon(JPanel panel, GridBagConstraints gbc, String labelText, String value, String iconName) {
-        JPanel fieldPanel = new JPanel(new BorderLayout(10, 5));
-        fieldPanel.setOpaque(false);
-        
-        // Label with icon
-        JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        labelPanel.setOpaque(false);
-        
-        ImageIcon icon = IconUtils.loadIcon(iconName, IconUtils.ICON_SIZE_SMALL);
-        JLabel iconLabel = new JLabel(icon);
-        iconLabel.setForeground(AppColors.TEXT_PRIMARY);
-        JLabel textLabel = UIUtils.createLabel(labelText + ":", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
-        
-        labelPanel.add(iconLabel);
-        labelPanel.add(textLabel);
-        
-        // Value
-        JLabel valueLabel = UIUtils.createLabel(value != null ? value : "N/A", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
-        valueLabel.setBorder(BorderFactory.createEmptyBorder(5, 30, 0, 0));
-        
-        fieldPanel.add(labelPanel, BorderLayout.NORTH);
-        fieldPanel.add(valueLabel, BorderLayout.CENTER);
-        
-        panel.add(fieldPanel, gbc);
-    }
 
-    private void addEditableFieldWithIcon(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field, String iconName) {
-        JPanel fieldPanel = new JPanel(new BorderLayout(10, 5));
+    private void addEditableFieldWithIcon(JPanel panel, GridBagConstraints gbc, String label, JComponent field, String iconName) {
+        JPanel fieldPanel = new JPanel(new BorderLayout(10, 0));
         fieldPanel.setOpaque(false);
-        
-        // Label with icon
-        JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        labelPanel.setOpaque(false);
-        
-        ImageIcon icon = IconUtils.loadIcon(iconName, IconUtils.ICON_SIZE_SMALL);
-        JLabel iconLabel = new JLabel(icon);
-        iconLabel.setForeground(AppColors.TEXT_PRIMARY);
-        JLabel textLabel = UIUtils.createLabel(labelText + ":", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
-        
-        labelPanel.add(iconLabel);
-        labelPanel.add(textLabel);
-        
-        fieldPanel.add(labelPanel, BorderLayout.NORTH);
+
+        // Add icon
+        ImageIcon icon = IconUtils.loadIcon(iconName + ".png", IconUtils.ICON_SIZE_SMALL);
+        if (icon != null) {
+            JLabel iconLabel = new JLabel(icon);
+            fieldPanel.add(iconLabel, BorderLayout.WEST);
+        }
+
+        // Add field
         fieldPanel.add(field, BorderLayout.CENTER);
-        
+
+        // Add to form
+        panel.add(UIUtils.createLabel(label, UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
         panel.add(fieldPanel, gbc);
     }
 
-    private JTextField createStyledField(String placeholder, String initialValue) {
-        JTextField field = UIUtils.createRoundedTextField();
-        field.setFont(UIConstants.BODY_FONT);
-        field.setText(initialValue);
-        field.setPreferredSize(new Dimension(field.getPreferredSize().width, 40));
-        return field;
-    }
+    private void addDetailFieldWithIcon(JPanel panel, GridBagConstraints gbc, String label, String value, String iconName) {
+        JPanel fieldPanel = new JPanel(new BorderLayout(10, 0));
+        fieldPanel.setOpaque(false);
 
-    private JPasswordField createStyledPasswordField(String placeholder) {
-        JPasswordField field = UIUtils.createRoundedPasswordField();
-        field.setFont(UIConstants.BODY_FONT);
-        field.setPreferredSize(new Dimension(field.getPreferredSize().width, 40));
-        return field;
+        // Add icon
+        ImageIcon icon = IconUtils.loadIcon(iconName + ".png", IconUtils.ICON_SIZE_SMALL);
+        if (icon != null) {
+            JLabel iconLabel = new JLabel(icon);
+            fieldPanel.add(iconLabel, BorderLayout.WEST);
+        }
+
+        // Add value label
+        JLabel valueLabel = UIUtils.createLabel(value != null ? value : "N/A", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
+        fieldPanel.add(valueLabel, BorderLayout.CENTER);
+
+        // Add to form
+        panel.add(UIUtils.createLabel(label, UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
+        panel.add(fieldPanel, gbc);
     }
 
     private void toggleEditMode(JButton editButton) {
@@ -308,26 +343,26 @@ public class ProfilePanel extends JPanel {
 
     private void saveChanges() {
         try {
-        // Validate inputs
-        String name = nameField.getText().trim();
-        String email = emailField.getText().trim();
-        String phone = phoneField.getText().trim();
-        
-        if (name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+            // Validate inputs
+            String name = nameField.getText().trim();
+            String email = emailField.getText().trim();
+            String phone = phoneField.getText().trim();
+            
+            if (name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
                 showError("All fields are required");
-            return;
-        }
-        
+                return;
+            }
+            
             if (!ValidationUtils.isValidEmail(email)) {
                 showError("Please enter a valid email address");
-            return;
-        }
-        
+                return;
+            }
+            
             if (!ValidationUtils.isValidPhoneNumber(phone)) {
                 showError("Please enter a valid phone number");
-            return;
-        }
-        
+                return;
+            }
+            
             // Check if password fields are filled
             String currentPassword = currentPasswordField != null ? new String(currentPasswordField.getPassword()) : "";
             String newPassword = newPasswordField != null ? new String(newPasswordField.getPassword()) : "";
@@ -351,6 +386,11 @@ public class ProfilePanel extends JPanel {
                 showSuccess("Profile updated successfully");
                 isEditing = false;
                 refreshUI();
+                
+                // Notify callback if provided
+                if (onProfileUpdate != null) {
+                    onProfileUpdate.accept(currentUser);
+                }
             } catch (SQLException e) {
                 showError("Failed to update profile in database: " + e.getMessage());
                 return;
@@ -404,54 +444,6 @@ public class ProfilePanel extends JPanel {
         }
     }
 
-    private void changePassword() {
-        try {
-            String currentPassword = new String(currentPasswordField.getPassword());
-            String newPassword = new String(newPasswordField.getPassword());
-            String confirmPassword = new String(confirmPasswordField.getPassword());
-
-            if (currentPassword.isEmpty()) {
-                showError("Current password is required");
-                return;
-            }
-
-            // Verify current password
-            SecurityUtils.VerificationResult verificationResult = SecurityUtils.verifyPassword(currentPassword, currentUser.getPassword());
-            if (!verificationResult.isSuccess()) {
-                showError("Current password is incorrect");
-                return;
-            }
-
-            if (newPassword.isEmpty() || confirmPassword.isEmpty()) {
-                showError("New password and confirmation are required");
-                return;
-            }
-
-            if (!newPassword.equals(confirmPassword)) {
-                showError("New passwords do not match");
-                return;
-            }
-
-            if (!ValidationUtils.isValidPassword(newPassword)) {
-                showError("New password does not meet requirements");
-            return;
-        }
-        
-            // Update password
-            currentUser.setPassword(SecurityUtils.hashPassword(newPassword));
-            AuthController.getInstance().updateUser(currentUser);
-            
-            showSuccess("Password changed successfully");
-        
-        // Clear password fields
-        currentPasswordField.setText("");
-        newPasswordField.setText("");
-            confirmPasswordField.setText("");
-        } catch (Exception e) {
-            showError("Error changing password: " + e.getMessage());
-        }
-    }
-
     private void showError(String message) {
         errorLabel.setText(message);
         successLabel.setText("");
@@ -463,9 +455,25 @@ public class ProfilePanel extends JPanel {
     }
 
     private void refreshUI() {
+        // Remove all components
         removeAll();
+        
+        // Rebuild UI
         setupUI();
+        
+        // Refresh the panel
         revalidate();
         repaint();
+    }
+
+    private String getInitials(String name) {
+        if (name == null || name.isEmpty()) return "?";
+        String[] parts = name.trim().split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (String part : parts) {
+            if (!part.isEmpty()) sb.append(Character.toUpperCase(part.charAt(0)));
+            if (sb.length() == 2) break;
+        }
+        return sb.toString();
     }
 }

@@ -153,7 +153,7 @@ public class SQLUserDAO implements UserDAO {
      */
     @Override
     public User update(User user) throws SQLException {
-        String query = "UPDATE users SET name = ?, email = ?, password = ?, role = ?, active = ?, security_question1 = ?, security_answer1 = ?, security_question2 = ?, security_answer2 = ? WHERE id = ?";
+        String query = "UPDATE users SET name = ?, email = ?, password = ?, role = ?, active = ?, phone = ?, security_question1 = ?, security_answer1 = ?, security_question2 = ?, security_answer2 = ? WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
             stmt.setString(1, user.getName());
             stmt.setString(2, user.getEmail());
@@ -165,11 +165,12 @@ public class SQLUserDAO implements UserDAO {
             stmt.setString(3, password);
             stmt.setString(4, user.getRole().toString());
             stmt.setBoolean(5, user.isActive());
-            stmt.setString(6, user.getSecurityQuestion1());
-            stmt.setString(7, user.getSecurityAnswer1());
-            stmt.setString(8, user.getSecurityQuestion2());
-            stmt.setString(9, user.getSecurityAnswer2());
-            stmt.setInt(10, user.getId());
+            stmt.setString(6, user.getPhone());
+            stmt.setString(7, user.getSecurityQuestion1());
+            stmt.setString(8, user.getSecurityAnswer1());
+            stmt.setString(9, user.getSecurityQuestion2());
+            stmt.setString(10, user.getSecurityAnswer2());
+            stmt.setInt(11, user.getId());
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
                 throw new SQLException("Updating user failed, no rows affected.");
@@ -295,7 +296,7 @@ public class SQLUserDAO implements UserDAO {
         user.setPassword(rs.getString("password"));
         user.setPhone(rs.getString("phone"));
         user.setRole(User.UserRole.valueOf(rs.getString("role")));
-        user.setActive(rs.getBoolean("is_active"));
+        user.setActive(rs.getBoolean("active"));
         user.setRegistrationDate(rs.getString("registration_date"));
         
         Timestamp lastLoginAt = rs.getTimestamp("last_login_at");

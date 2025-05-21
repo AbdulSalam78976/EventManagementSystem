@@ -445,7 +445,7 @@ public class AdminDashboardNew extends JFrame {
                     event.getTitle(),
                     event.getEventDate() != null ? event.getEventDate().format(dateFormat) : "N/A",
                     event.getVenueName(),
-                    event.getOrganizer() != null ? event.getOrganizer().getName() : "Unknown",
+                    event.getOrganizer() != null ? event.getOrganizer().getName() : "Admin",
                     event.getStatus().toString(),
                     event.getTotalSlots() - event.getAvailableSlots(),
                     event.getAvailableSlots(),
@@ -484,243 +484,23 @@ public class AdminDashboardNew extends JFrame {
     }
 
     private void showEventDetails(Event event) {
-        // Create and show event details dialog
         JDialog dialog = new JDialog(this, "Event Details", true);
         dialog.setSize(1000, 800);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout(10, 10));
         dialog.getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Create main scroll pane
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-        mainPanel.setBackground(Color.WHITE);
-
-        // Header Panel with Title and Status
-        RoundedPanel headerPanel = new RoundedPanel(new BorderLayout(10, 0), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
-        headerPanel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
-
-        // Title and Status section
-        JPanel titleStatusPanel = new JPanel(new BorderLayout(10, 5));
-        titleStatusPanel.setOpaque(false);
-
-        JLabel titleLabel = UIUtils.createLabel(event.getTitle(), UIConstants.HEADER_FONT, AppColors.TEXT_PRIMARY);
-        titleStatusPanel.add(titleLabel, BorderLayout.CENTER);
-
-        JLabel statusLabel = UIUtils.createLabel(event.getStatus().getDisplayName(), UIConstants.BODY_FONT_BOLD, getStatusColor(event.getStatus().name()));
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        statusLabel.setOpaque(true);
-        statusLabel.setBackground(new Color(getStatusColor(event.getStatus().name()).getRGB() & 0xFFFFFF | 0x33000000, true));
-        titleStatusPanel.add(statusLabel, BorderLayout.EAST);
-
-        headerPanel.add(titleStatusPanel, BorderLayout.CENTER);
-
-        // Category and Created Date
-        JPanel metaPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        metaPanel.setOpaque(false);
-        
-        JLabel categoryLabel = UIUtils.createLabel("Category: " + event.getCategory(), UIConstants.SMALL_FONT, AppColors.TEXT_SECONDARY);
-        JLabel createdLabel = UIUtils.createLabel("Created: " + event.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM d, yyyy")), 
-                                                UIConstants.SMALL_FONT, AppColors.TEXT_SECONDARY);
-        
-        metaPanel.add(categoryLabel);
-        metaPanel.add(new JSeparator(JSeparator.VERTICAL) {
-            {
-                setPreferredSize(new Dimension(1, 12));
-                setForeground(AppColors.BORDER);
-            }
-        });
-        metaPanel.add(createdLabel);
-        headerPanel.add(metaPanel, BorderLayout.SOUTH);
-
-        mainPanel.add(headerPanel);
-        mainPanel.add(Box.createVerticalStrut(20));
-
-        // Event Details Section
-        RoundedPanel detailsPanel = createSectionPanel("Event Details");
-        JPanel detailsGrid = new JPanel(new GridLayout(0, 2, 20, 10));
-        detailsGrid.setOpaque(false);
-        detailsGrid.setBorder(BorderFactory.createEmptyBorder(10, 15, 15, 15));
-
-        addDetailField(detailsGrid, "Date:", event.getEventDate().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")));
-        addDetailField(detailsGrid, "Time:", event.getEventDate().format(DateTimeFormatter.ofPattern("h:mm a")) + " - " +
-                                          event.getEventDate().plusHours(2).format(DateTimeFormatter.ofPattern("h:mm a")));
-        addDetailField(detailsGrid, "Venue:", event.getVenueName());
-        addDetailField(detailsGrid, "Total Slots:", String.valueOf(event.getTotalSlots()));
-        addDetailField(detailsGrid, "Available Slots:", String.valueOf(event.getAvailableSlots()));
-        addDetailField(detailsGrid, "Registration Deadline:", 
-            event.getRegistrationDeadline().format(DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a")));
-
-        detailsPanel.add(detailsGrid, BorderLayout.CENTER);
-        mainPanel.add(detailsPanel);
-        mainPanel.add(Box.createVerticalStrut(15));
-
-        // Description Section
-        RoundedPanel descriptionPanel = createSectionPanel("Description");
-        JTextArea descArea = new JTextArea(event.getDescription());
-        descArea.setWrapStyleWord(true);
-        descArea.setLineWrap(true);
-        descArea.setEditable(false);
-        descArea.setBackground(Color.WHITE);
-        descArea.setFont(UIConstants.BODY_FONT);
-        descArea.setBorder(BorderFactory.createEmptyBorder(10, 15, 15, 15));
-        descriptionPanel.add(descArea, BorderLayout.CENTER);
-        mainPanel.add(descriptionPanel);
-        mainPanel.add(Box.createVerticalStrut(15));
-
-        // Eligibility Criteria Section (if available)
-        if (event.getEligibilityCriteria() != null && !event.getEligibilityCriteria().trim().isEmpty()) {
-            RoundedPanel eligibilityPanel = createSectionPanel("Eligibility Criteria");
-            JTextArea eligArea = new JTextArea(event.getEligibilityCriteria());
-            eligArea.setWrapStyleWord(true);
-            eligArea.setLineWrap(true);
-            eligArea.setEditable(false);
-            eligArea.setBackground(Color.WHITE);
-            eligArea.setFont(UIConstants.BODY_FONT);
-            eligArea.setBorder(BorderFactory.createEmptyBorder(10, 15, 15, 15));
-            eligibilityPanel.add(eligArea, BorderLayout.CENTER);
-            mainPanel.add(eligibilityPanel);
-            mainPanel.add(Box.createVerticalStrut(15));
-        }
-
-        // Organizer Information Section
-        RoundedPanel organizerPanel = createSectionPanel("Organizer Information");
-        JPanel organizerGrid = new JPanel(new GridLayout(0, 2, 20, 10));
-        organizerGrid.setOpaque(false);
-        organizerGrid.setBorder(BorderFactory.createEmptyBorder(10, 15, 15, 15));
-
-        if (event.getOrganizer() != null) {
-            addDetailField(organizerGrid, "Name:", event.getOrganizer().getName());
-            addDetailField(organizerGrid, "Email:", event.getOrganizer().getEmail());
-            addDetailField(organizerGrid, "Phone:", event.getOrganizer().getPhone());
-        }
-        addDetailField(organizerGrid, "Contact Info:", event.getContactInfo());
-
-        organizerPanel.add(organizerGrid, BorderLayout.CENTER);
-        mainPanel.add(organizerPanel);
-        mainPanel.add(Box.createVerticalStrut(15));
-
-        // Media Section (if available)
-        if (event.getMainImage() != null || event.getAdditionalDocuments() != null) {
-            RoundedPanel mediaPanel = createSectionPanel("Media & Documents");
-            JPanel mediaContent = new JPanel();
-            mediaContent.setLayout(new BoxLayout(mediaContent, BoxLayout.Y_AXIS));
-            mediaContent.setOpaque(false);
-            mediaContent.setBorder(BorderFactory.createEmptyBorder(10, 15, 15, 15));
-
-            if (event.getMainImage() != null) {
-                try {
-                    ImageIcon originalIcon = new ImageIcon(event.getMainImage());
-                    Image image = originalIcon.getImage().getScaledInstance(400, 300, Image.SCALE_SMOOTH);
-                    JLabel imageLabel = new JLabel(new ImageIcon(image));
-                    imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-                    imageLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-                    mediaContent.add(imageLabel);
-                } catch (Exception e) {
-                    System.err.println("Error loading event image: " + e.getMessage());
-                }
-            }
-
-            if (event.getAdditionalDocuments() != null) {
-                JPanel docPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-                docPanel.setOpaque(false);
-                
-                JButton viewDocsButton = UIUtils.createButton(
-                    "View Documents",
-                    null,
-                    UIUtils.ButtonType.SECONDARY,
-                    UIUtils.ButtonSize.NORMAL
-                );
-                viewDocsButton.addActionListener(e -> {
-                    try {
-                        File tempFile = File.createTempFile("event_doc_", "." + event.getAdditionalDocumentsType());
-                        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                            fos.write(event.getAdditionalDocuments());
-                        }
-                        Desktop.getDesktop().open(tempFile);
-                        tempFile.deleteOnExit();
-                    } catch (IOException ex) {
-                        UIUtils.showError(dialog, "Error opening document: " + ex.getMessage());
-                    }
-                });
-                docPanel.add(viewDocsButton);
-                mediaContent.add(docPanel);
-            }
-
-            mediaPanel.add(mediaContent, BorderLayout.CENTER);
-            mainPanel.add(mediaPanel);
-            mainPanel.add(Box.createVerticalStrut(15));
-        }
-
-        // Registration Status Section
-        RoundedPanel registrationPanel = createSectionPanel("Registration Status");
-        JPanel registrationGrid = new JPanel(new GridLayout(0, 2, 20, 10));
-        registrationGrid.setOpaque(false);
-        registrationGrid.setBorder(BorderFactory.createEmptyBorder(10, 15, 15, 15));
-
-        int registeredUsers = event.getRegisteredUsers();
-        double registrationRate = event.getTotalSlots() > 0 ? 
-            (registeredUsers * 100.0) / event.getTotalSlots() : 0;
-
-        addDetailField(registrationGrid, "Registered Users:", 
-            String.format("%d of %d (%d%%)", 
-                registeredUsers, 
-                event.getTotalSlots(),
-                (int)registrationRate));
-        
-        addDetailField(registrationGrid, "Registration Status:", 
-            event.isAvailable() ? "Open" : "Closed");
-        
-        addDetailField(registrationGrid, "Event Status:", 
-            event.isUpcoming() ? "Upcoming" : 
-            event.isOngoing() ? "Ongoing" : 
-            event.isPast() ? "Past" : "Unknown");
-
-        registrationPanel.add(registrationGrid, BorderLayout.CENTER);
-        mainPanel.add(registrationPanel);
-
-        // Add the mainPanel to a scroll pane
-        JScrollPane scrollPane = new JScrollPane(mainPanel);
-        scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        dialog.add(scrollPane, BorderLayout.CENTER);
-
-        // Action buttons panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        buttonPanel.setBackground(Color.WHITE);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-
-        // Add action buttons based on event status
-        if (event.getStatus() == Event.EventStatus.PENDING) {
-            JButton approveButton = UIUtils.createButton("Approve", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
-            approveButton.addActionListener(e -> {
-                handleEventApproval(event);
+        EventDetailsPanel detailsPanel = new EventDetailsPanel(
+            event,
+            e -> {
                 dialog.dispose();
-            });
-            buttonPanel.add(approveButton);
-
-            JButton rejectButton = UIUtils.createButton("Reject", null, UIUtils.ButtonType.ERROR, UIUtils.ButtonSize.NORMAL);
-            rejectButton.addActionListener(e -> {
-                handleEventRejection(event);
-                dialog.dispose();
-            });
-            buttonPanel.add(rejectButton);
-        }
-
-        // Edit button (available for all statuses)
-        JButton editButton = UIUtils.createButton("Edit", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
-        editButton.addActionListener(e -> {
-            dialog.dispose();
-            showEditEventDialog(event);
-        });
-        buttonPanel.add(editButton);
-
-        // Close button
-        JButton closeButton = UIUtils.createButton("Close", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
-        closeButton.addActionListener(e -> dialog.dispose());
-        buttonPanel.add(closeButton);
-
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
+                showEditEventDialog(event);
+            },
+            event.getStatus() == Event.EventStatus.PENDING ? e -> { handleEventApproval(event); dialog.dispose(); } : null,
+            event.getStatus() == Event.EventStatus.PENDING ? e -> { handleEventRejection(event); dialog.dispose(); } : null,
+            e -> dialog.dispose()
+        );
+        dialog.add(detailsPanel, BorderLayout.CENTER);
         dialog.setVisible(true);
     }
 
@@ -836,120 +616,8 @@ public class AdminDashboardNew extends JFrame {
         return panel;
     }
 
-    /**
-     * Creates the reports panel
-     * 
-     * @return the reports panel
-     */
-    private JPanel createReportsPanel() {
-        JPanel panel = UIUtils.createPanel(new BorderLayout(), true);
-        panel.setBackground(AppColors.BACKGROUND_LIGHT);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        // Header section
-        JPanel headerSection = UIUtils.createPanel(new BorderLayout(), false);
-        headerSection.setOpaque(false);
-
-        JLabel titleLabel = UIUtils.createLabel(
-            "Reports and Analytics",
-            UIConstants.HEADER_FONT,
-            AppColors.TEXT_PRIMARY
-        );
-        headerSection.add(titleLabel, BorderLayout.WEST);
-
-        JButton generateButton = UIUtils.createButton(
-            "📊 Generate Report",
-            null,
-            UIUtils.ButtonType.PRIMARY,
-            UIUtils.ButtonSize.NORMAL
-        );
-        headerSection.add(generateButton, BorderLayout.EAST);
-
-        panel.add(headerSection, BorderLayout.NORTH);
-
-        // Main content
-        JPanel mainContent = UIUtils.createPanel(new GridLayout(2, 2, 20, 20), false);
-        mainContent.setOpaque(false);
-        mainContent.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
-        
-        // Report card 1
-        RoundedPanel userReportPanel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
-        userReportPanel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
-        
-        JLabel userReportTitle = UIUtils.createLabel("USER STATISTICS", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
-        userReportPanel.add(userReportTitle, BorderLayout.NORTH);
-        
-        JLabel userReportContent = UIUtils.createLabel("User growth and activity charts will appear here", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
-        userReportContent.setHorizontalAlignment(SwingConstants.CENTER);
-        userReportPanel.add(userReportContent, BorderLayout.CENTER);
-        
-        JButton userReportBtn = UIUtils.createButton("View Details", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
-        JPanel userBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        userBtnPanel.setOpaque(false);
-        userBtnPanel.add(userReportBtn);
-        userReportPanel.add(userBtnPanel, BorderLayout.SOUTH);
-        
-        // Report card 2
-        RoundedPanel eventReportPanel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
-        eventReportPanel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
-        
-        JLabel eventReportTitle = UIUtils.createLabel("EVENT STATISTICS", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
-        eventReportPanel.add(eventReportTitle, BorderLayout.NORTH);
-        
-        JLabel eventReportContent = UIUtils.createLabel("Event creation and registration charts will appear here", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
-        eventReportContent.setHorizontalAlignment(SwingConstants.CENTER);
-        eventReportPanel.add(eventReportContent, BorderLayout.CENTER);
-        
-        JButton eventReportBtn = UIUtils.createButton("View Details", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
-        JPanel eventBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        eventBtnPanel.setOpaque(false);
-        eventBtnPanel.add(eventReportBtn);
-        eventReportPanel.add(eventBtnPanel, BorderLayout.SOUTH);
-        
-        // Report card 3
-        RoundedPanel attendanceReportPanel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
-        attendanceReportPanel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
-        
-        JLabel attendanceReportTitle = UIUtils.createLabel("ATTENDANCE STATISTICS", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
-        attendanceReportPanel.add(attendanceReportTitle, BorderLayout.NORTH);
-        
-        JLabel attendanceReportContent = UIUtils.createLabel("Attendance and participation charts will appear here", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
-        attendanceReportContent.setHorizontalAlignment(SwingConstants.CENTER);
-        attendanceReportPanel.add(attendanceReportContent, BorderLayout.CENTER);
-        
-        JButton attendanceReportBtn = UIUtils.createButton("View Details", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
-        JPanel attendanceBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        attendanceBtnPanel.setOpaque(false);
-        attendanceBtnPanel.add(attendanceReportBtn);
-        attendanceReportPanel.add(attendanceBtnPanel, BorderLayout.SOUTH);
-        
-        // Report card 4
-        RoundedPanel revenueReportPanel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
-        revenueReportPanel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
-        
-        JLabel revenueReportTitle = UIUtils.createLabel("REVENUE STATISTICS", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
-        revenueReportPanel.add(revenueReportTitle, BorderLayout.NORTH);
-        
-        JLabel revenueReportContent = UIUtils.createLabel("Revenue and transaction charts will appear here", UIConstants.BODY_FONT, AppColors.TEXT_SECONDARY);
-        revenueReportContent.setHorizontalAlignment(SwingConstants.CENTER);
-        revenueReportPanel.add(revenueReportContent, BorderLayout.CENTER);
-        
-        JButton revenueReportBtn = UIUtils.createButton("View Details", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
-        JPanel revenueBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        revenueBtnPanel.setOpaque(false);
-        revenueBtnPanel.add(revenueReportBtn);
-        revenueReportPanel.add(revenueBtnPanel, BorderLayout.SOUTH);
-        
-        mainContent.add(userReportPanel);
-        mainContent.add(eventReportPanel);
-        mainContent.add(attendanceReportPanel);
-        mainContent.add(revenueReportPanel);
-        
-        panel.add(mainContent, BorderLayout.CENTER);
-
-        return panel;
-    }
-
+   
+   
     /**
      * Creates the settings panel
      * 

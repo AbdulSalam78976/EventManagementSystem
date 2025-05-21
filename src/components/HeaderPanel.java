@@ -111,16 +111,9 @@ public class HeaderPanel extends JPanel {
         labelPanel.add(userLabel);
         labelPanel.add(roleLabel);
 
-        // Logout button
-        JButton logoutButton = UIUtils.createButton("Logout", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
-        logoutButton.setForeground(Color.WHITE);
-        logoutButton.addActionListener(e -> handleLogout());
-
         userInfo.add(avatarPanel);
         userInfo.add(Box.createHorizontalStrut(10));
         userInfo.add(labelPanel);
-        userInfo.add(Box.createHorizontalStrut(15));
-        userInfo.add(logoutButton);
 
         userPanel.add(userInfo);
         return userPanel;
