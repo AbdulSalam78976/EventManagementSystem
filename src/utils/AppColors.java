@@ -22,7 +22,7 @@ public class AppColors {
     public static final Color ACCENT = new Color(155, 89, 182);
     public static final Color ACCENT_DARK = new Color(142, 68, 173);
     public static final Color ACCENT_LIGHT = new Color(155, 89, 182, 20);
-    
+
     // Specific Accent Colors for Dashboard Stats
     public static final Color ACCENT_YELLOW = new Color(241, 196, 15); // Corresponds to WARNING
     public static final Color ACCENT_GREEN = new Color(46, 204, 113);  // Corresponds to SUCCESS
@@ -42,9 +42,9 @@ public class AppColors {
     public static final Color TEXT_DARK = new Color(44, 62, 80);
 
     // Border Colors
-    public static final Color BORDER = new Color(189, 195, 199);
+    public static final Color BORDER = new Color(189, 195, 199); // Lighter border for normal state
     public static final Color BORDER_LIGHT = new Color(236, 240, 241);
-    public static final Color BORDER_DARK = new Color(127, 140, 141);
+    public static final Color BORDER_FOCUS = new Color(52, 152, 219); // Blue focus border (matches PRIMARY_LIGHT)
 
     // Status Colors
     public static final Color SUCCESS = new Color(46, 204, 113);

@@ -7,6 +7,8 @@ import models.User;
 import models.Event;
 import models.Registration;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -36,9 +38,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import models.Event.EventStatus;
 
+import components.EventDetailsPanel;
 import components.GradientButton;
 import components.ProfilePanel;
-import components.SettingsPanel;
 
 /**
  * Organizer Dashboard
@@ -127,7 +129,6 @@ public class OrganizerDashboard extends JFrame {
         sidebarPanel.addNavButton("Participants", "", "Participants", false);
         sidebarPanel.addNavButton("Media Upload", "", "Media Upload", false);
         sidebarPanel.addNavButton("Profile", "", "Profile", false);
-        sidebarPanel.addNavButton("Settings", "", "Settings", false);
         sidebarPanel.addLogoutButton(e -> handleLogout());
 
         // Add content cards
@@ -142,7 +143,6 @@ public class OrganizerDashboard extends JFrame {
         contentPanel.add(createParticipantsPanel(), "Participants");
         contentPanel.add(createMediaUploadPanel(), "Media Upload");
         contentPanel.add(new ProfilePanel(authController.getCurrentUser(), true), "Profile");
-        contentPanel.add(new SettingsPanel(authController.getCurrentUser()), "Settings");
 
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         mainPanel.add(sidebarPanel, BorderLayout.WEST);
@@ -259,60 +259,211 @@ public class OrganizerDashboard extends JFrame {
     }
 
     private JPanel createMyEventsPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = UIUtils.createPanel(new BorderLayout(20, 20), true);
         panel.setBackground(AppColors.BACKGROUND_LIGHT);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JLabel titleLabel = UIUtils.createLabel("My Events", UIConstants.TITLE_FONT, AppColors.TEXT_PRIMARY);
-        panel.add(titleLabel, BorderLayout.NORTH);
+        // Header section
+        JPanel headerSection = UIUtils.createPanel(new BorderLayout(), false);
+        headerSection.setOpaque(false);
 
-        String[] columns = {"Event Name", "Date", "Location", "Status", "Actions"};
+        JLabel titleLabel = UIUtils.createLabel(
+            "My Events",
+            UIConstants.HEADER_FONT,
+            AppColors.TEXT_PRIMARY
+        );
+        headerSection.add(titleLabel, BorderLayout.WEST);
+
+        // Stats panel
+        JPanel statsPanel = new JPanel(new GridLayout(1, 4, 15, 0));
+        statsPanel.setOpaque(false);
+
+        try {
+            List<Event> myEvents = eventController.getEventsByOrganizer(authController.getCurrentUser().getId());
+
+            // Count events by status
+            long upcomingCount = myEvents.stream().filter(e -> e.isUpcoming() && e.getStatus() == EventStatus.APPROVED).count();
+            long ongoingCount = myEvents.stream().filter(e -> e.isOngoing() && e.getStatus() == EventStatus.APPROVED).count();
+            long completedCount = myEvents.stream().filter(e -> e.getStatus() == EventStatus.COMPLETED).count();
+
+            // Add stat cards
+            statsPanel.add(UIUtils.createStatCard("Total Events", String.valueOf(myEvents.size()), null));
+            statsPanel.add(UIUtils.createStatCard("Upcoming", String.valueOf(upcomingCount), null));
+            statsPanel.add(UIUtils.createStatCard("Ongoing", String.valueOf(ongoingCount), null));
+            statsPanel.add(UIUtils.createStatCard("Completed", String.valueOf(completedCount), null));
+        } catch (SQLException e) {
+            UIUtils.showError(this, "Error loading event statistics: " + e.getMessage());
+        }
+
+        // Add header and stats to top panel
+        JPanel topPanel = new JPanel(new BorderLayout(0, 20));
+        topPanel.setOpaque(false);
+        topPanel.add(headerSection, BorderLayout.NORTH);
+        topPanel.add(statsPanel, BorderLayout.CENTER);
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        // Main content - Events Table
+        RoundedPanel contentPanel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+        contentPanel.setBorder(UIUtils.createRoundedBorder(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1));
+
+        // Create table model
+        String[] columns = {"ID", "Title", "Date", "Venue", "Status", "Registered", "Available", "Actions"};
         DefaultTableModel tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 4;
+                return column == 7; // Only actions column is editable
             }
         };
 
-        JTable table = new JTable(tableModel);
-        table.setRowHeight(40);
-        table.getTableHeader().setReorderingAllowed(false);
+        JTable eventsTable = new JTable(tableModel);
+        eventsTable.setRowHeight(40);
+        eventsTable.setShowGrid(true);
+        eventsTable.setGridColor(new Color(230, 230, 230));
+        eventsTable.getTableHeader().setReorderingAllowed(false);
+        eventsTable.getTableHeader().setFont(UIConstants.SMALL_FONT_BOLD);
+        eventsTable.getTableHeader().setBackground(AppColors.BACKGROUND_LIGHT);
+        eventsTable.getTableHeader().setForeground(AppColors.TEXT_SECONDARY);
 
-        // Load events
-        try {
-            List<Event> events = eventController.getEventsByOrganizer(authController.getCurrentUser().getId());
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            for (Event event : events) {
-                JButton viewButton = new JButton("View Details");
-                viewButton.addActionListener(e -> {
-                    new EventDetailsScreen(event.getId(), authController.getCurrentUser()).setVisible(true);
-                });
-                JButton updateButton = new JButton("Update");
-                boolean canUpdate = event.getStatus() != EventStatus.COMPLETED && event.getStatus() != EventStatus.CANCELLED;
-                updateButton.setEnabled(canUpdate);
-                updateButton.addActionListener(e -> {
-                    // Show the Create Event form pre-filled for update (implement as needed)
-                    // For now, just show a message
-                    JOptionPane.showMessageDialog(this, "Update event functionality coming soon!");
-                });
-                JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-                actionsPanel.setOpaque(false);
-                actionsPanel.add(viewButton);
-                actionsPanel.add(updateButton);
-                tableModel.addRow(new Object[]{
-                    event.getTitle(),
-                    event.getEventDate().format(dateFormatter),
-                    event.getVenueName(),
-                    event.getStatus().name(),
-                    actionsPanel
+        // Set column widths
+        eventsTable.getColumnModel().getColumn(0).setMaxWidth(50); // ID
+        eventsTable.getColumnModel().getColumn(3).setPreferredWidth(150); // Venue
+        eventsTable.getColumnModel().getColumn(4).setPreferredWidth(100); // Status
+        eventsTable.getColumnModel().getColumn(5).setMaxWidth(100); // Registered
+        eventsTable.getColumnModel().getColumn(6).setMaxWidth(100); // Available
+        eventsTable.getColumnModel().getColumn(7).setMaxWidth(120); // Actions
+
+        // Add button renderer for actions column
+        eventsTable.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JButton button = UIUtils.createButton("View Details", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
+                button.setHorizontalAlignment(SwingConstants.CENTER);
+                return button;
+            }
+        });
+
+        // Add button editor for actions column
+        eventsTable.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(new JCheckBox()) {
+            private JButton button;
+            {
+                button = UIUtils.createButton("View Details", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
+                button.setHorizontalAlignment(SwingConstants.CENTER);
+                button.addActionListener(e -> {
+                    int row = eventsTable.getSelectedRow();
+                    if (row >= 0) {
+                        try {
+                            int eventId = (int) eventsTable.getValueAt(row, 0);
+                            Event event = eventController.getEvent(eventId);
+                            OrganizerDashboard.this.showEventDetails(event);
+                        } catch (SQLException ex) {
+                            UIUtils.showError(panel, "Error loading event details: " + ex.getMessage());
+                        }
+                    }
+                    fireEditingStopped();
                 });
             }
-        } catch (Exception e) {
+
+            @Override
+            public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+                return button;
+            }
+
+            @Override
+            public Object getCellEditorValue() {
+                return "View Details";
+            }
+        });
+
+        // Load events data
+        try {
+            List<Event> events = eventController.getEventsByOrganizer(authController.getCurrentUser().getId());
+            DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+
+            for (Event event : events) {
+                Object[] rowData = {
+                    event.getId(),
+                    event.getTitle(),
+                    event.getEventDate() != null ? event.getEventDate().format(dateFormat) : "N/A",
+                    event.getVenueName(),
+                    event.getStatus().toString(),
+                    event.getTotalSlots() - event.getAvailableSlots(),
+                    event.getAvailableSlots(),
+                    "View Details"
+                };
+                tableModel.addRow(rowData);
+            }
+        } catch (SQLException e) {
             UIUtils.showError(this, "Error loading events: " + e.getMessage());
         }
 
-        table.getColumn("Actions").setCellRenderer((tbl, value, isSelected, hasFocus, row, col) -> (JPanel) value);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        // Add search and filter panel
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        filterPanel.setOpaque(false);
+
+        JTextField searchField = UIUtils.createRoundedTextField();
+        searchField.setPreferredSize(new Dimension(200, 30));
+        searchField.setToolTipText("Search by event title");
+
+        JButton searchButton = UIUtils.createButton("Search", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
+
+        JComboBox<String> statusFilter = UIUtils.createRoundedComboBox(new String[]{"All", "APPROVED", "PENDING", "COMPLETED", "CANCELLED"});
+        statusFilter.setPreferredSize(new Dimension(150, 30));
+
+        // Add action listeners for search and filter
+        searchButton.addActionListener(e -> {
+            String searchText = searchField.getText().toLowerCase();
+            String selectedStatus = (String) statusFilter.getSelectedItem();
+
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) eventsTable.getModel());
+            eventsTable.setRowSorter(sorter);
+
+            RowFilter<DefaultTableModel, Object> textFilter = RowFilter.regexFilter("(?i)" + searchText, 1); // Search in title column
+
+            if (selectedStatus.equals("All")) {
+                sorter.setRowFilter(textFilter);
+            } else {
+                RowFilter<DefaultTableModel, Object> statusRowFilter = RowFilter.regexFilter("^" + selectedStatus + "$", 4); // Status column
+                sorter.setRowFilter(RowFilter.andFilter(List.of(textFilter, statusRowFilter)));
+            }
+        });
+
+        // Add change listener for status filter
+        statusFilter.addActionListener(e -> {
+            String searchText = searchField.getText().toLowerCase();
+            String selectedStatus = (String) statusFilter.getSelectedItem();
+
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) eventsTable.getModel());
+            eventsTable.setRowSorter(sorter);
+
+            if (searchText.isEmpty() && selectedStatus.equals("All")) {
+                sorter.setRowFilter(null);
+            } else if (selectedStatus.equals("All")) {
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + searchText, 1)); // Search in title column
+            } else if (searchText.isEmpty()) {
+                sorter.setRowFilter(RowFilter.regexFilter("^" + selectedStatus + "$", 4)); // Status column
+            } else {
+                RowFilter<DefaultTableModel, Object> textFilter = RowFilter.regexFilter("(?i)" + searchText, 1);
+                RowFilter<DefaultTableModel, Object> statusRowFilter = RowFilter.regexFilter("^" + selectedStatus + "$", 4);
+                sorter.setRowFilter(RowFilter.andFilter(List.of(textFilter, statusRowFilter)));
+            }
+        });
+
+        filterPanel.add(new JLabel("Search:"));
+        filterPanel.add(searchField);
+        filterPanel.add(searchButton);
+        filterPanel.add(new JLabel("Status:"));
+        filterPanel.add(statusFilter);
+
+        // Add table to scroll pane
+        JScrollPane tableScrollPane = new JScrollPane(eventsTable);
+        tableScrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        // Add components to content panel
+        contentPanel.add(filterPanel, BorderLayout.NORTH);
+        contentPanel.add(tableScrollPane, BorderLayout.CENTER);
+
+        panel.add(contentPanel, BorderLayout.CENTER);
+
         return panel;
     }
 
@@ -403,7 +554,35 @@ public class OrganizerDashboard extends JFrame {
                     int eventId = (int) model.getValueAt(row, 0);
                     Event event = eventController.getEvent(eventId);
                     if (event != null) {
-                        new EventDetailsScreen(event.getId(), authController.getCurrentUser()).setVisible(true);
+                        // Create a dialog with options to view or edit
+                        JDialog optionsDialog = new JDialog(OrganizerDashboard.this, "Event Options", true);
+                        optionsDialog.setLayout(new BorderLayout());
+                        optionsDialog.setSize(300, 150);
+                        optionsDialog.setLocationRelativeTo(OrganizerDashboard.this);
+
+                        JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+                        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+                        JButton viewButton = new JButton("View Event Details");
+                        viewButton.addActionListener(e -> {
+                            optionsDialog.dispose();
+                            showEventDetails(event);
+                        });
+
+                        JButton editButton = new JButton("Edit Event");
+                        boolean canEdit = event.getStatus() != Event.EventStatus.COMPLETED &&
+                                         event.getStatus() != Event.EventStatus.CANCELLED;
+                        editButton.setEnabled(canEdit);
+                        editButton.addActionListener(e -> {
+                            optionsDialog.dispose();
+                            showEditEventDialog(event);
+                        });
+
+                        buttonPanel.add(viewButton);
+                        buttonPanel.add(editButton);
+
+                        optionsDialog.add(buttonPanel, BorderLayout.CENTER);
+                        optionsDialog.setVisible(true);
                     }
                 } catch (SQLException e) {
                     UIUtils.showError(OrganizerDashboard.this, "Error opening event details: " + e.getMessage());
@@ -570,7 +749,7 @@ public class OrganizerDashboard extends JFrame {
 
                 // Set additional fields
                 event.setEligibilityCriteria(eligibilityField.getText().trim());
-              
+
 
                 // Save event
                 eventController.createEvent(
@@ -683,6 +862,66 @@ public class OrganizerDashboard extends JFrame {
         }
     }
 
+    /**
+     * Shows a dialog with event details using the EventDetailsPanel
+     *
+     * @param event The event to show details for
+     */
+    private void showEventDetails(Event event) {
+        JDialog dialog = new JDialog(this, "Event Details", true);
+        dialog.setSize(1000, 800);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        EventDetailsPanel detailsPanel = new EventDetailsPanel(
+            event,
+            e -> {
+                dialog.dispose();
+                showEditEventDialog(event);
+            },
+            null, // No approve button for organizer
+            null, // No reject button for organizer
+            e -> dialog.dispose()
+        );
+        dialog.add(detailsPanel, BorderLayout.CENTER);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Shows a dialog to edit an event
+     *
+     * @param event The event to edit
+     */
+    private void showEditEventDialog(Event event) {
+        JDialog dialog = new JDialog(this, "Edit Event", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(800, 700);
+        dialog.setLocationRelativeTo(this);
+
+        CreateEventForm form = new CreateEventForm("Organizer", success -> {
+            if (success) {
+                // Refresh the dashboard and events table
+                loadDashboardData();
+
+                // Show confirmation message
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Event details have been successfully updated!",
+                    "Changes Saved",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+            dialog.dispose();
+        });
+
+        // Set the form data with the event to edit
+        form.setEventData(event);
+
+        dialog.add(form, BorderLayout.CENTER);
+        dialog.setVisible(true);
+    }
+
     private JPanel createMediaUploadPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(AppColors.BACKGROUND_LIGHT);
@@ -782,31 +1021,82 @@ public class OrganizerDashboard extends JFrame {
             User currentUser = authController.getCurrentUser();
             List<Event> events = eventController.getEventsByOrganizer(currentUser.getId());
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+            DateTimeFormatter deadlineFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
 
             // Clear existing events
             recentEventsPanel.removeAll();
             recentEventsPanel.setLayout(new BoxLayout(recentEventsPanel, BoxLayout.Y_AXIS));
 
             // Add title
+            JPanel titlePanel = new JPanel(new BorderLayout());
+            titlePanel.setOpaque(false);
+
             JLabel titleLabel = UIUtils.createLabel(
                 "Recent Events",
                 UIConstants.BODY_FONT_BOLD,
                 AppColors.TEXT_PRIMARY
             );
             titleLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
-            recentEventsPanel.add(titleLabel);
+            titlePanel.add(titleLabel, BorderLayout.WEST);
+
+            JLabel viewAllLabel = UIUtils.createLabel(
+                "View All Events →",
+                UIConstants.SMALL_FONT,
+                AppColors.PRIMARY
+            );
+            viewAllLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
+            viewAllLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            viewAllLabel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    contentLayout.show(contentPanel, "My Events");
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    viewAllLabel.setText("<html><u>View All Events →</u></html>");
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    viewAllLabel.setText("View All Events →");
+                }
+            });
+            titlePanel.add(viewAllLabel, BorderLayout.EAST);
+
+            recentEventsPanel.add(titlePanel);
 
             // Add recent events (up to 5)
             int count = 0;
             for (Event event : events) {
                 if (count >= 5) break;
 
+                // Make the entire panel clickable to view event details
                 JPanel eventPanel = new JPanel(new BorderLayout(10, 0));
                 eventPanel.setBackground(Color.WHITE);
                 eventPanel.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(AppColors.BORDER),
                     BorderFactory.createEmptyBorder(10, 15, 10, 15)
                 ));
+                eventPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+                // Add click listener to the entire panel
+                eventPanel.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        showEventDetails(event);
+                    }
+
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        eventPanel.setBackground(new Color(245, 245, 250));
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        eventPanel.setBackground(Color.WHITE);
+                    }
+                });
 
                 // Event name and status
                 JPanel headerPanel = new JPanel(new BorderLayout());
@@ -819,49 +1109,109 @@ public class OrganizerDashboard extends JFrame {
                 // Status badge
                 JLabel statusLabel = new JLabel(event.getStatus().name());
                 statusLabel.setFont(UIConstants.SMALL_FONT);
-                statusLabel.setForeground(getStatusColor(event.getStatus()));
+                statusLabel.setForeground(Color.WHITE);
+                statusLabel.setOpaque(true);
+                statusLabel.setBackground(getStatusColor(event.getStatus()));
+                statusLabel.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
                 headerPanel.add(statusLabel, BorderLayout.EAST);
 
                 eventPanel.add(headerPanel, BorderLayout.NORTH);
 
-                // Event details
-                JPanel detailsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+                // Event details in a grid layout
+                JPanel detailsPanel = new JPanel(new GridLayout(3, 2, 10, 5));
                 detailsPanel.setOpaque(false);
 
-                JLabel dateLabel = new JLabel("\uD83D\uDCC5 " + event.getEventDate().format(dateFormatter));
-                dateLabel.setFont(UIConstants.SMALL_FONT);
-                detailsPanel.add(dateLabel);
+                // Date and time
+                JLabel dateIconLabel = new JLabel("\uD83D\uDCC5");
+                dateIconLabel.setFont(UIConstants.SMALL_FONT);
+                JLabel dateValueLabel = new JLabel(event.getEventDate().format(dateFormatter));
+                dateValueLabel.setFont(UIConstants.SMALL_FONT);
 
-                JLabel venueLabel = new JLabel("📍 " + event.getVenueName());
-                venueLabel.setFont(UIConstants.SMALL_FONT);
-                detailsPanel.add(venueLabel);
+                // Venue
+                JLabel venueIconLabel = new JLabel("📍");
+                venueIconLabel.setFont(UIConstants.SMALL_FONT);
+                JLabel venueValueLabel = new JLabel(event.getVenueName());
+                venueValueLabel.setFont(UIConstants.SMALL_FONT);
 
-                JLabel slotsLabel = new JLabel("👥 " + event.getAvailableSlots() + "/" + event.getTotalSlots() + " slots");
-                slotsLabel.setFont(UIConstants.SMALL_FONT);
-                detailsPanel.add(slotsLabel);
-
-                eventPanel.add(detailsPanel, BorderLayout.CENTER);
-
-                // Action buttons
-                JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-                actionPanel.setOpaque(false);
-
-                JButton viewButton = UIUtils.createButton(
-                    "View Details",
-                    null,
-                    UIUtils.ButtonType.SECONDARY,
-                    UIUtils.ButtonSize.SMALL
+                // Registration slots
+                JLabel slotsIconLabel = new JLabel("👥");
+                slotsIconLabel.setFont(UIConstants.SMALL_FONT);
+                JLabel slotsValueLabel = new JLabel(
+                    (event.getTotalSlots() - event.getAvailableSlots()) + " registered, " +
+                    event.getAvailableSlots() + " available"
                 );
-                viewButton.addActionListener(e -> {
-                    new EventDetailsScreen(event.getId(), currentUser).setVisible(true);
-                });
-                actionPanel.add(viewButton);
+                slotsValueLabel.setFont(UIConstants.SMALL_FONT);
 
-                eventPanel.add(actionPanel, BorderLayout.SOUTH);
+                // Category
+                JLabel categoryIconLabel = new JLabel("🏷️");
+                categoryIconLabel.setFont(UIConstants.SMALL_FONT);
+                JLabel categoryValueLabel = new JLabel(event.getCategory());
+                categoryValueLabel.setFont(UIConstants.SMALL_FONT);
+
+                // Registration deadline
+                JLabel deadlineIconLabel = new JLabel("⏰");
+                deadlineIconLabel.setFont(UIConstants.SMALL_FONT);
+                JLabel deadlineValueLabel = new JLabel("Deadline: " + event.getRegistrationDeadline().format(deadlineFormatter));
+                deadlineValueLabel.setFont(UIConstants.SMALL_FONT);
+
+                // Add a short description
+                JLabel descIconLabel = new JLabel("📝");
+                descIconLabel.setFont(UIConstants.SMALL_FONT);
+
+                // Truncate description if too long
+                String description = event.getDescription();
+                if (description.length() > 50) {
+                    description = description.substring(0, 47) + "...";
+                }
+                JLabel descValueLabel = new JLabel(description);
+                descValueLabel.setFont(UIConstants.SMALL_FONT);
+
+                // Add all components to the details panel
+                detailsPanel.add(dateIconLabel);
+                detailsPanel.add(dateValueLabel);
+                detailsPanel.add(venueIconLabel);
+                detailsPanel.add(venueValueLabel);
+                detailsPanel.add(slotsIconLabel);
+                detailsPanel.add(slotsValueLabel);
+
+                // Create another panel for the second row of details
+                JPanel moreDetailsPanel = new JPanel(new GridLayout(3, 2, 10, 5));
+                moreDetailsPanel.setOpaque(false);
+
+                moreDetailsPanel.add(categoryIconLabel);
+                moreDetailsPanel.add(categoryValueLabel);
+                moreDetailsPanel.add(deadlineIconLabel);
+                moreDetailsPanel.add(deadlineValueLabel);
+                moreDetailsPanel.add(descIconLabel);
+                moreDetailsPanel.add(descValueLabel);
+
+                // Add both details panels to a container
+                JPanel allDetailsPanel = new JPanel(new BorderLayout(0, 10));
+                allDetailsPanel.setOpaque(false);
+                allDetailsPanel.add(detailsPanel, BorderLayout.NORTH);
+                allDetailsPanel.add(moreDetailsPanel, BorderLayout.CENTER);
+
+                // Add padding
+                allDetailsPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 5, 0));
+
+                eventPanel.add(allDetailsPanel, BorderLayout.CENTER);
+
                 recentEventsPanel.add(eventPanel);
                 recentEventsPanel.add(Box.createVerticalStrut(10));
 
                 count++;
+            }
+
+            // If no events, show a message
+            if (count == 0) {
+                JLabel noEventsLabel = UIUtils.createLabel(
+                    "No events found. Click 'Create Event' to get started!",
+                    UIConstants.BODY_FONT,
+                    AppColors.TEXT_SECONDARY
+                );
+                noEventsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                noEventsLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
+                recentEventsPanel.add(noEventsLabel);
             }
 
             recentEventsPanel.revalidate();
@@ -905,7 +1255,7 @@ public class OrganizerDashboard extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         SwingUtilities.invokeLater(() -> {
             try {
                 new OrganizerDashboard().setVisible(true);

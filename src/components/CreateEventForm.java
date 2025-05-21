@@ -76,6 +76,10 @@ public class CreateEventForm extends JPanel {
     private NotificationController notificationController;
     private UserController userController;
 
+    // For tracking if we're editing an existing event
+    private boolean isEditMode = false;
+    private Event eventBeingEdited;
+
     /**
      * Create a new event form
      *
@@ -115,7 +119,7 @@ public class CreateEventForm extends JPanel {
         formPanel.setBackground(Color.WHITE);
         formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Title
+        // Title - will be updated if in edit mode
         JLabel titleLabel = UIUtils.createLabel("Create Event", UIConstants.HEADER_FONT, AppColors.TEXT_PRIMARY);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         formPanel.add(titleLabel, BorderLayout.NORTH);
@@ -259,7 +263,13 @@ public class CreateEventForm extends JPanel {
         buttonPanel.setBackground(Color.WHITE);
 
         JButton submitButton = UIUtils.createButton("Create Event", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
-        submitButton.addActionListener(e -> handleCreateEvent());
+        submitButton.addActionListener(e -> {
+            if (isEditMode && eventBeingEdited != null) {
+                handleUpdateEvent();
+            } else {
+                handleCreateEvent();
+            }
+        });
 
         JButton clearButton = UIUtils.createButton("Clear Form", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
         clearButton.addActionListener(e -> {
@@ -295,7 +305,7 @@ public class CreateEventForm extends JPanel {
     private void selectImage() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileFilter(new FileNameExtensionFilter("Image files", "jpg", "jpeg", "png", "gif"));
-        
+
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
@@ -303,7 +313,7 @@ public class CreateEventForm extends JPanel {
                 // Read image file into byte array
                 selectedImageData = Files.readAllBytes(selectedFile.toPath());
                 selectedImageType = Files.probeContentType(selectedFile.toPath());
-                
+
                 // Display image preview
                 ImageIcon icon = new ImageIcon(selectedImageData);
                 Image image = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
@@ -411,7 +421,7 @@ public class CreateEventForm extends JPanel {
             LocalDate date = LocalDate.parse(dateStr);
             LocalTime startTime = LocalTime.parse(startTimeStr);
             LocalTime endTime = LocalTime.parse(endTimeStr);
-            
+
             LocalDateTime startDateTime = LocalDateTime.of(date, startTime);
             LocalDateTime endDateTime = LocalDateTime.of(date, endTime);
 
@@ -536,7 +546,7 @@ public class CreateEventForm extends JPanel {
             sdf.setLenient(false);
             Date eventDate = sdf.parse(dateStr);
             Date today = Calendar.getInstance().getTime();
-            
+
             // Reset time part for both dates to compare only dates
             Calendar eventCal = Calendar.getInstance();
             eventCal.setTime(eventDate);
@@ -544,14 +554,14 @@ public class CreateEventForm extends JPanel {
             eventCal.set(Calendar.MINUTE, 0);
             eventCal.set(Calendar.SECOND, 0);
             eventCal.set(Calendar.MILLISECOND, 0);
-            
+
             Calendar todayCal = Calendar.getInstance();
             todayCal.setTime(today);
             todayCal.set(Calendar.HOUR_OF_DAY, 0);
             todayCal.set(Calendar.MINUTE, 0);
             todayCal.set(Calendar.SECOND, 0);
             todayCal.set(Calendar.MILLISECOND, 0);
-            
+
             return eventCal.before(todayCal);
         } catch (Exception e) {
             return false;
@@ -564,7 +574,7 @@ public class CreateEventForm extends JPanel {
             LocalDate date = LocalDate.parse(dateStr);
             LocalTime time = LocalTime.parse(timeStr);
             LocalDateTime eventDateTime = LocalDateTime.of(date, time);
-            
+
             return eventDateTime.isBefore(LocalDateTime.now());
         } catch (Exception e) {
             return false;
@@ -599,12 +609,12 @@ public class CreateEventForm extends JPanel {
             // Parse times in 24-hour format
             String[] startParts = startTime.split(":");
             String[] endParts = endTime.split(":");
-            
+
             int startHour = Integer.parseInt(startParts[0]);
             int startMinute = Integer.parseInt(startParts[1]);
             int endHour = Integer.parseInt(endParts[0]);
             int endMinute = Integer.parseInt(endParts[1]);
-            
+
             if (endHour > startHour) {
                 return true;
             }
@@ -644,12 +654,58 @@ public class CreateEventForm extends JPanel {
      * @param event The event to load data from
      */
     public void setEventData(Event event) {
+        // Set edit mode flag and store the event being edited
+        isEditMode = true;
+        eventBeingEdited = event;
+
+        // Update form title
+        Container parent = getParent();
+        while (parent != null && !(parent instanceof JDialog)) {
+            parent = parent.getParent();
+        }
+        if (parent instanceof JDialog) {
+            ((JDialog) parent).setTitle("Edit Event");
+        }
+
+        // Update the form fields
+        Component[] components = ((JPanel)getComponent(0)).getComponents();
+        for (Component c : components) {
+            if (c instanceof JLabel && "Create Event".equals(((JLabel)c).getText())) {
+                ((JLabel)c).setText("Edit Event");
+                break;
+            }
+        }
+
+        // Update the submit button text
+        Component[] formComponents = ((JPanel)((JScrollPane)getComponent(0)).getViewport().getView()).getComponents();
+        for (Component c : formComponents) {
+            if (c instanceof JPanel) {
+                Component[] panelComponents = ((JPanel)c).getComponents();
+                for (Component pc : panelComponents) {
+                    if (pc instanceof JButton && "Create Event".equals(((JButton)pc).getText())) {
+                        ((JButton)pc).setText("Update Event");
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Fill in the form fields
         eventNameField.setText(event.getTitle());
         categoryField.setText(event.getCategory());
         descriptionArea.setText(event.getDescription());
         dateField.setText(event.getEventDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        startTimeField.setText(event.getEventDate().format(DateTimeFormatter.ofPattern("hh:mm a")));
-        endTimeField.setText(event.getEventDate().plusHours(1).format(DateTimeFormatter.ofPattern("hh:mm a")));
+
+        // Format times in 24-hour format for proper parsing
+        startTimeField.setText(event.getEventDate().format(DateTimeFormatter.ofPattern("HH:mm")));
+
+        // Calculate end time as 1 hour after start time
+        LocalDateTime endTime = event.getEventDate().plusHours(1);
+        endTimeField.setText(endTime.format(DateTimeFormatter.ofPattern("HH:mm")));
+
+        // Format registration deadline
+        registrationDeadlineField.setText(event.getRegistrationDeadline().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+
         venueNameField.setText(event.getVenueName());
         totalSlotsSpinner.setValue(event.getTotalSlots());
         eligibilityArea.setText(event.getEligibilityCriteria());
@@ -658,12 +714,122 @@ public class CreateEventForm extends JPanel {
         if (event.getMainImage() != null) {
             selectedImageData = event.getMainImage();
             selectedImageType = event.getMainImageType();
-            
+
             // Display image preview
             ImageIcon icon = new ImageIcon(selectedImageData);
             Image image = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
             imageLabel.setIcon(new ImageIcon(image));
             imageLabel.setText("Current image");
+        }
+
+        // Set documents data
+        if (event.getAdditionalDocuments() != null) {
+            selectedDocumentsData = event.getAdditionalDocuments();
+            selectedDocumentsType = event.getAdditionalDocumentsType();
+            documentsLabel.setText("Current documents");
+        }
+    }
+
+    /**
+     * Handle updating an existing event
+     */
+    private void handleUpdateEvent() {
+        if (eventBeingEdited == null) {
+            errorLabel.setText("Error: No event to update");
+            return;
+        }
+
+        // Validate inputs (same validation as create event)
+        if (eventNameField.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter an event name.");
+            return;
+        }
+        if (categoryField.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter a category.");
+            return;
+        }
+        if (descriptionArea.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter a description.");
+            return;
+        }
+        if (dateField.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter a date.");
+            return;
+        }
+        if (startTimeField.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter a start time.");
+            return;
+        }
+        if (endTimeField.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter an end time.");
+            return;
+        }
+        if (venueNameField.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter a venue name.");
+            return;
+        }
+        if (eligibilityArea.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter eligibility criteria.");
+            return;
+        }
+        if (registrationDeadlineField.getText().trim().isEmpty()) {
+            errorLabel.setText("Please enter a registration deadline.");
+            return;
+        }
+
+        try {
+            // Parse date and time
+            LocalDate date = LocalDate.parse(dateField.getText().trim());
+            LocalTime startTime = LocalTime.parse(startTimeField.getText().trim());
+
+            LocalDateTime startDateTime = LocalDateTime.of(date, startTime);
+
+            // Parse registration deadline
+            LocalDateTime registrationDeadline = LocalDateTime.parse(
+                registrationDeadlineField.getText().trim(),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+            );
+
+            // Check if registration deadline is before event start
+            if (registrationDeadline.isAfter(startDateTime)) {
+                errorLabel.setText("Registration deadline must be before event start time.");
+                return;
+            }
+
+            // Update the event object
+            eventBeingEdited.setTitle(eventNameField.getText().trim());
+            eventBeingEdited.setDescription(descriptionArea.getText().trim());
+            eventBeingEdited.setCategory(categoryField.getText().trim());
+            eventBeingEdited.setVenueName(venueNameField.getText().trim());
+            eventBeingEdited.setTotalSlots((Integer) totalSlotsSpinner.getValue());
+            eventBeingEdited.setEligibilityCriteria(eligibilityArea.getText().trim());
+            eventBeingEdited.setEventDate(startDateTime);
+            eventBeingEdited.setRegistrationDeadline(registrationDeadline);
+
+            // Update image and documents if changed
+            if (selectedImageData != null) {
+                eventBeingEdited.setMainImage(selectedImageData);
+                eventBeingEdited.setMainImageType(selectedImageType);
+            }
+
+            if (selectedDocumentsData != null) {
+                eventBeingEdited.setAdditionalDocuments(selectedDocumentsData);
+                eventBeingEdited.setAdditionalDocumentsType(selectedDocumentsType);
+            }
+
+            // Save the updated event
+            eventController.updateEvent(eventBeingEdited);
+
+            // Notify success and trigger UI refresh
+            if (onSubmitCallback != null) {
+                onSubmitCallback.accept(true);
+            }
+
+        } catch (DateTimeParseException e) {
+            errorLabel.setText("Invalid date/time format. Please use YYYY-MM-DD for date and HH:mm for time.");
+        } catch (Exception e) {
+            errorLabel.setText("Error updating event: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -675,7 +841,7 @@ public class CreateEventForm extends JPanel {
             String dateStr = dateField.getText();
             String startTimeStr = startTimeField.getText();
             String endTimeStr = endTimeField.getText();
-            
+
             eventDate = LocalDateTime.parse(dateStr + "T" + startTimeStr);
             registrationDeadline = LocalDateTime.parse(dateStr + "T" + endTimeStr);
         } catch (DateTimeParseException e) {

@@ -15,22 +15,22 @@ import java.net.URL;
  * Utility class for UI components with consistent styling
  */
 public class UIUtils {
-    // Default corner radius for rounded components
-    public static final int CORNER_RADIUS = 10;
-    
-    // Default padding for components
-    public static final int PADDING_SMALL = 5;
-    public static final int PADDING_MEDIUM = 10;
-    public static final int PADDING_LARGE = 15;
-    
+    // Default corner radius for rounded components - use UIConstants instead
+    public static final int CORNER_RADIUS = UIConstants.CORNER_RADIUS_MEDIUM;
+
+    // Default padding for components - use UIConstants instead
+    public static final int PADDING_SMALL = UIConstants.PADDING_SMALL;
+    public static final int PADDING_MEDIUM = UIConstants.PADDING_MEDIUM;
+    public static final int PADDING_LARGE = UIConstants.PADDING_LARGE;
+
     // Prevent instantiation
     private UIUtils() {
         throw new IllegalStateException("Utility class");
     }
-    
+
     /**
      * Creates a panel with rounded corners
-     * 
+     *
      * @param backgroundColor The background color of the panel
      * @param radius The corner radius
      * @return A JPanel with rounded corners
@@ -41,19 +41,19 @@ public class UIUtils {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
+
                 // Paint background
                 g2.setColor(backgroundColor);
                 g2.fill(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), radius, radius));
-                
+
                 g2.dispose();
             }
         };
     }
-    
+
     /**
      * Creates a panel with rounded corners and a layout manager
-     * 
+     *
      * @param backgroundColor The background color of the panel
      * @param radius The corner radius
      * @param layout The layout manager to use
@@ -64,14 +64,14 @@ public class UIUtils {
         panel.setLayout(layout);
         return panel;
     }
-    
+
     /**
-     * Creates a rounded border
-     * 
+     * Creates a rounded border with enhanced visibility
+     *
      * @param color The border color
      * @param radius The corner radius
      * @param thickness The border thickness
-     * @return A Border with rounded corners
+     * @return A Border with rounded corners and improved visibility
      */
     public static Border createRoundedBorder(Color color, int radius, int thickness) {
         return new Border() {
@@ -79,29 +79,31 @@ public class UIUtils {
             public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+                // Use a slightly thicker stroke for better visibility
                 g2.setColor(color);
-                g2.setStroke(new BasicStroke(thickness));
+                g2.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.draw(new RoundRectangle2D.Double(x, y, width - 1, height - 1, radius, radius));
-                
+
                 g2.dispose();
             }
-            
+
             @Override
             public Insets getBorderInsets(Component c) {
-                return new Insets(thickness, thickness, thickness, thickness);
+                return new Insets(thickness + 1, thickness + 1, thickness + 1, thickness + 1);
             }
-            
+
             @Override
             public boolean isBorderOpaque() {
                 return false;
             }
         };
     }
-    
+
     /**
      * Creates a rounded border with padding
-     * 
+     *
      * @param color The border color
      * @param radius The corner radius
      * @param thickness The border thickness
@@ -114,10 +116,10 @@ public class UIUtils {
             BorderFactory.createEmptyBorder(padding, padding, padding, padding)
         );
     }
-    
+
     /**
      * Creates a sidebar button with consistent styling
-     * 
+     *
      * @param text The button text
      * @param icon The button icon (can be null)
      * @param isSelected Whether the button is selected
@@ -130,7 +132,7 @@ public class UIUtils {
             button.setHorizontalAlignment(SwingConstants.LEFT);
             button.setIconTextGap(10);
         }
-        
+
         // Set button properties
         button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         button.setForeground(Color.WHITE);
@@ -140,13 +142,13 @@ public class UIUtils {
         button.setContentAreaFilled(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setMaximumSize(new Dimension(200, 40));
-        
+
         // Add rounded corners
         button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-        
+
         return button;
     }
-    
+
     /**
      * Creates a sidebar navigation button with consistent styling and an ActionListener.
      * This method handles loading the icon from resources.
@@ -158,7 +160,7 @@ public class UIUtils {
      */
     public static JButton createSidebarNavButton(String text, String iconName, ActionListener listener) {
         JButton button = new JButton(text);
-        
+
         // Load and set icon if provided
         if (iconName != null) {
             ImageIcon icon = IconUtils.loadIcon(iconName, IconUtils.ICON_SIZE_NORMAL); // Assuming default icon size for sidebar
@@ -168,7 +170,7 @@ public class UIUtils {
                 button.setIconTextGap(10);
             }
         }
-        
+
         // Set button properties
         button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         button.setForeground(AppColors.TEXT_LIGHT);
@@ -195,74 +197,264 @@ public class UIUtils {
                 button.setBackground(AppColors.BACKGROUND_DARK); // Revert on exit
             }
         });
-        
+
         if (listener != null) {
             button.addActionListener(listener);
         }
-        
+
         return button;
     }
-    
+
     /**
-     * Creates a text field with rounded corners
-     * 
-     * @return A JTextField with rounded corners
+     * Creates a text field with more rounded corners, shadow effect, and enhanced visibility
+     *
+     * @return A JTextField with stylish rounded corners and subtle shadow
      */
     public static JTextField createRoundedTextField() {
-        JTextField textField = new JTextField();
+        // Create a custom text field with shadow effect
+        JTextField textField = new JTextField() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Paint shadow
+                g2.setColor(new Color(0, 0, 0, 10));
+                g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                // Paint background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                super.paintComponent(g);
+            }
+        };
+
         textField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        textField.setBorder(createRoundedBorderWithPadding(AppColors.BORDER_LIGHT, CORNER_RADIUS, 1, PADDING_MEDIUM));
+        textField.setOpaque(false); // Make transparent to show our custom background
+
+        // Create more rounded borders with larger radius
+        Border normalBorder = createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_LARGE, 1, PADDING_MEDIUM);
+        Border focusBorder = createRoundedBorderWithPadding(AppColors.BORDER_FOCUS, UIConstants.CORNER_RADIUS_LARGE, 2, PADDING_MEDIUM);
+
+        // Set initial border
+        textField.setBorder(normalBorder);
+
+        // Add focus listener to change border color when focused
+        textField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                textField.setBorder(focusBorder);
+                textField.setBackground(new Color(245, 250, 255)); // Very light blue background on focus
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                textField.setBorder(normalBorder);
+                textField.setBackground(Color.WHITE);
+            }
+        });
+
         return textField;
     }
-    
+
     /**
-     * Creates a password field with rounded corners
-     * 
-     * @return A JPasswordField with rounded corners
+     * Creates a password field with more rounded corners, shadow effect, and enhanced visibility
+     *
+     * @return A JPasswordField with stylish rounded corners and subtle shadow
      */
     public static JPasswordField createRoundedPasswordField() {
-        JPasswordField passwordField = new JPasswordField();
+        // Create a custom password field with shadow effect
+        JPasswordField passwordField = new JPasswordField() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Paint shadow
+                g2.setColor(new Color(0, 0, 0, 10));
+                g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                // Paint background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                super.paintComponent(g);
+            }
+        };
+
         passwordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        passwordField.setBorder(createRoundedBorderWithPadding(AppColors.BORDER_LIGHT, CORNER_RADIUS, 1, PADDING_MEDIUM));
+        passwordField.setOpaque(false); // Make transparent to show our custom background
+
+        // Create more rounded borders with larger radius
+        Border normalBorder = createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_LARGE, 1, PADDING_MEDIUM);
+        Border focusBorder = createRoundedBorderWithPadding(AppColors.BORDER_FOCUS, UIConstants.CORNER_RADIUS_LARGE, 2, PADDING_MEDIUM);
+
+        // Set initial border
+        passwordField.setBorder(normalBorder);
+
+        // Add focus listener to change border color when focused
+        passwordField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                passwordField.setBorder(focusBorder);
+                passwordField.setBackground(new Color(245, 250, 255)); // Very light blue background on focus
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                passwordField.setBorder(normalBorder);
+                passwordField.setBackground(Color.WHITE);
+            }
+        });
+
         return passwordField;
     }
-    
+
     /**
-     * Creates a text area with rounded corners
-     * 
-     * @return A JTextArea with rounded corners
+     * Creates a text area with more rounded corners, shadow effect, and enhanced visibility
+     *
+     * @return A JTextArea with stylish rounded corners and subtle shadow
      */
     public static JTextArea createRoundedTextArea() {
-        JTextArea textArea = new JTextArea();
+        // Create a custom text area with shadow effect
+        JTextArea textArea = new JTextArea() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Paint shadow
+                g2.setColor(new Color(0, 0, 0, 10));
+                g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                // Paint background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                super.paintComponent(g);
+            }
+        };
+
         textArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
-        textArea.setBorder(createRoundedBorderWithPadding(AppColors.BORDER_LIGHT, CORNER_RADIUS, 1, PADDING_MEDIUM));
+        textArea.setOpaque(false); // Make transparent to show our custom background
+
+        // Create more rounded borders with larger radius
+        Border normalBorder = createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_LARGE, 1, PADDING_MEDIUM);
+        Border focusBorder = createRoundedBorderWithPadding(AppColors.BORDER_FOCUS, UIConstants.CORNER_RADIUS_LARGE, 2, PADDING_MEDIUM);
+
+        // Set initial border
+        textArea.setBorder(normalBorder);
+
+        // Add focus listener to change border color when focused
+        textArea.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                textArea.setBorder(focusBorder);
+                textArea.setBackground(new Color(245, 250, 255)); // Very light blue background on focus
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                textArea.setBorder(normalBorder);
+                textArea.setBackground(Color.WHITE);
+            }
+        });
+
         return textArea;
     }
-    
+
     /**
-     * Creates a scroll pane with rounded corners
-     * 
+     * Creates a scroll pane with more rounded corners and subtle shadow
+     *
      * @param component The component to scroll
-     * @return A JScrollPane with rounded corners
+     * @return A JScrollPane with stylish rounded corners and subtle shadow
      */
     public static JScrollPane createRoundedScrollPane(Component component) {
-        JScrollPane scrollPane = new JScrollPane(component);
-        scrollPane.setBorder(createRoundedBorder(AppColors.BORDER_LIGHT, CORNER_RADIUS, 1));
+        JScrollPane scrollPane = new JScrollPane(component) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Paint shadow
+                g2.setColor(new Color(0, 0, 0, 10));
+                g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                // Paint background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                super.paintComponent(g);
+            }
+        };
+
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.setBorder(createRoundedBorder(AppColors.BORDER, UIConstants.CORNER_RADIUS_LARGE, 1));
+
         return scrollPane;
     }
-    
+
     /**
-     * Creates a combo box with rounded corners
-     * 
+     * Creates a combo box with more rounded corners, shadow effect, and enhanced visibility
+     *
      * @param items The items to display in the combo box
-     * @return A JComboBox with rounded corners
+     * @return A JComboBox with stylish rounded corners and subtle shadow
      */
     public static <T> JComboBox<T> createRoundedComboBox(T[] items) {
-        JComboBox<T> comboBox = new JComboBox<>(items);
+        // Create a custom combo box with shadow effect
+        JComboBox<T> comboBox = new JComboBox<T>(items) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Paint shadow
+                g2.setColor(new Color(0, 0, 0, 10));
+                g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                // Paint background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, UIConstants.CORNER_RADIUS_LARGE, UIConstants.CORNER_RADIUS_LARGE);
+
+                super.paintComponent(g);
+            }
+        };
+
         comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        comboBox.setBorder(createRoundedBorder(AppColors.BORDER_LIGHT, CORNER_RADIUS, 1));
+        comboBox.setOpaque(false); // Make transparent to show our custom background
+
+        // Create more rounded borders with larger radius
+        Border normalBorder = createRoundedBorder(AppColors.BORDER, UIConstants.CORNER_RADIUS_LARGE, 1);
+        Border focusBorder = createRoundedBorder(AppColors.BORDER_FOCUS, UIConstants.CORNER_RADIUS_LARGE, 2);
+
+        // Set initial border
+        comboBox.setBorder(normalBorder);
+
+        // Add focus listener to change border color when focused
+        comboBox.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                comboBox.setBorder(focusBorder);
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                comboBox.setBorder(normalBorder);
+            }
+        });
+
+        // Customize the combo box UI
+        comboBox.setBackground(Color.WHITE);
+        if (comboBox.isEditable()) {
+            ((JComponent) comboBox.getEditor().getEditorComponent()).setBorder(
+                BorderFactory.createEmptyBorder(2, 5, 2, 5)
+            );
+        }
+
         return comboBox;
     }
 
@@ -277,7 +469,7 @@ public class UIUtils {
      */
     public static JButton createButton(String text, String iconName, ButtonType type, ButtonSize size) {
         JButton button = new JButton(text);
-        
+
         // Load and set icon if provided
         if (iconName != null) {
             ImageIcon icon = IconUtils.loadIcon(iconName, IconUtils.ICON_SIZE_NORMAL);
@@ -286,7 +478,7 @@ public class UIUtils {
                 button.setIconTextGap(10);
             }
         }
-        
+
         // Set button properties based on type
         switch (type) {
             case PRIMARY:
@@ -302,7 +494,7 @@ public class UIUtils {
                 button.setForeground(Color.WHITE);
                 break;
         }
-        
+
         // Set button size
         switch (size) {
             case SMALL:
@@ -322,7 +514,7 @@ public class UIUtils {
                 button.setPreferredSize(new Dimension(200, 45));
                 break;
         }
-        
+
         // Common button properties
         button.setBorderPainted(false);
         button.setFocusPainted(false);
@@ -383,7 +575,7 @@ public class UIUtils {
         LARGE,
         LARGE_RECTANGULAR
     }
-    
+
     /**
      * Creates a generic JPanel with specified layout and opacity.
      *
@@ -475,7 +667,7 @@ public class UIUtils {
      * @return A JPanel representing a stat card.
      */
     public static JPanel createStatCard(String title, String value, String iconName) {
-         RoundedPanel card = new RoundedPanel(new BorderLayout(0, 10), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+         RoundedPanel card = new RoundedPanel(new BorderLayout(0, 10), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM, true);
         card.setBorder(createRoundedBorderWithPadding(
             AppColors.BORDER,
             UIConstants.CORNER_RADIUS_MEDIUM,
@@ -517,7 +709,7 @@ public class UIUtils {
         }
 
         card.add(contentPanel, BorderLayout.CENTER);
-        
+
         return card;
     }
 
@@ -557,14 +749,15 @@ public class UIUtils {
     }
 
     /**
-     * Creates a card panel with standard styling.
+     * Creates a card panel with standard styling and shadow effect.
      */
     public static JPanel createCardPanel() {
-        JPanel panel = createPanel(new BorderLayout(), true);
-        panel.setBackground(AppColors.CARD_BACKGROUND);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(AppColors.BORDER), // Outer border
-            BorderFactory.createEmptyBorder(10, 10, 10, 10) // Inner padding
+        RoundedPanel panel = new RoundedPanel(new BorderLayout(), AppColors.CARD_BACKGROUND, UIConstants.CORNER_RADIUS_MEDIUM, true);
+        panel.setBorder(createRoundedBorderWithPadding(
+            AppColors.BORDER,
+            UIConstants.CORNER_RADIUS_MEDIUM,
+            1,
+            UIConstants.PADDING_MEDIUM
         ));
         return panel;
     }

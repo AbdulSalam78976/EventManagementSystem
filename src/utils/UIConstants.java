@@ -30,9 +30,10 @@ public class UIConstants {
     public static final int PADDING_XLARGE = 30;
 
     // Border Radius
-    public static final int CORNER_RADIUS_SMALL = 5;
-    public static final int CORNER_RADIUS_MEDIUM = 10;
-    public static final int CORNER_RADIUS_LARGE = 15;
+    public static final int CORNER_RADIUS_SMALL = 8;
+    public static final int CORNER_RADIUS_MEDIUM = 12;
+    public static final int CORNER_RADIUS_LARGE = 16;
+    public static final int CORNER_RADIUS_XLARGE = 20;
 
     // Animation
     public static final int ANIMATION_DURATION = 300; // milliseconds
@@ -160,4 +161,4 @@ public class UIConstants {
 
     // Colors
     public static final Color LINK = new Color(41, 128, 185); // Blue link color
-} 
+}

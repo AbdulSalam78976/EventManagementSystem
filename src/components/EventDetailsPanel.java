@@ -55,7 +55,7 @@ public class EventDetailsPanel extends JPanel {
         mainPanel.setBackground(Color.WHITE);
 
         // Header Panel
-        RoundedPanel headerPanel = new RoundedPanel(new BorderLayout(10, 0), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+        RoundedPanel headerPanel = new RoundedPanel(new BorderLayout(10, 0), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM, true);
         headerPanel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
 
         JPanel titleStatusPanel = new JPanel(new BorderLayout(10, 5));
@@ -345,7 +345,7 @@ public class EventDetailsPanel extends JPanel {
     }
 
     private RoundedPanel createSectionPanel(String title) {
-        RoundedPanel panel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
+        RoundedPanel panel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM, true);
         panel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
         JLabel titleLabel = UIUtils.createLabel(title, UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));

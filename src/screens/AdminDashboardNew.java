@@ -10,7 +10,9 @@ import models.Event;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -63,7 +65,7 @@ public class AdminDashboardNew extends JFrame {
 
     /**
      * Creates a new admin dashboard
-     * 
+     *
      * @throws SQLException if there is an error connecting to the database
      */
     public AdminDashboardNew() throws SQLException {
@@ -71,7 +73,7 @@ public class AdminDashboardNew extends JFrame {
         // Get the current user from the session
         User currentUser = SessionManager.getInstance().getCurrentUser();
         System.out.println("Current user: " + (currentUser != null ? currentUser.getName() : "null"));
-        
+
         if (currentUser == null || currentUser.getRole() != User.UserRole.ADMIN) {
             System.out.println("Access denied - User is null or not admin");
             // If no user is logged in or not an admin, redirect to login screen
@@ -135,13 +137,13 @@ public class AdminDashboardNew extends JFrame {
         sidebarPanel.addNavButton("All Events", "calendar.png", "All Events", false);
         sidebarPanel.addNavButton("Create Event", "create-event.png", "Create Event", false);
         sidebarPanel.addNavButton("Registered Users", "users.png", "Registered Users", false);
-        
+
         // Add refresh actions to buttons
         sidebarPanel.addNavButtonActionListener("Dashboard", e -> loadDashboardData());
         sidebarPanel.addNavButtonActionListener("Pending Approvals", e -> refreshPendingApprovals());
         sidebarPanel.addNavButtonActionListener("All Events", e -> refreshEventsPanel());
         sidebarPanel.addNavButtonActionListener("Registered Users", e -> refreshUsersPanel());
-        
+
         sidebarPanel.addSectionLabel("SYSTEM");
         sidebarPanel.addNavButton("System Settings", "setting.png", "System Settings", false);
 
@@ -187,7 +189,7 @@ public class AdminDashboardNew extends JFrame {
 
     /**
      * Creates the dashboard panel
-     * 
+     *
      * @return the dashboard panel
      */
     private JPanel createDashboardPanel() {
@@ -248,7 +250,7 @@ public class AdminDashboardNew extends JFrame {
         pendingScrollPane.setOpaque(false);
         pendingScrollPane.getViewport().setOpaque(false);
         pendingPanel.add(pendingScrollPane, BorderLayout.CENTER);
-        
+
         JButton viewAllPendingBtn = UIUtils.createButton("VIEW ALL PENDING", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
         viewAllPendingBtn.addActionListener(e -> cardLayout.show(mainContentPanel, "Pending Approvals"));
         JPanel pendingBtnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -273,7 +275,7 @@ public class AdminDashboardNew extends JFrame {
         activityScrollPane.setOpaque(false);
         activityScrollPane.getViewport().setOpaque(false);
         activityPanel.add(activityScrollPane, BorderLayout.CENTER);
-        
+
         JButton viewAllActivityBtn = UIUtils.createButton("VIEW ALL ACTIVITY", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
         viewAllActivityBtn.addActionListener(e -> cardLayout.show(mainContentPanel, "Activity Log"));
         JPanel activityBtnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -368,7 +370,7 @@ public class AdminDashboardNew extends JFrame {
         eventsTable.getTableHeader().setBackground(AppColors.BACKGROUND_LIGHT);
         eventsTable.setShowGrid(false);
         eventsTable.setIntercellSpacing(new Dimension(0, 0));
-        
+
         // Set column widths
         eventsTable.getColumnModel().getColumn(0).setPreferredWidth(50);  // ID
         eventsTable.getColumnModel().getColumn(1).setPreferredWidth(200); // Title
@@ -438,7 +440,7 @@ public class AdminDashboardNew extends JFrame {
         try {
             List<Event> events = eventController.getAllEvents();
             DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-            
+
             for (Event event : events) {
                 Object[] rowData = {
                     event.getId(),
@@ -457,11 +459,133 @@ public class AdminDashboardNew extends JFrame {
             UIUtils.showError(this, "Error loading events: " + e.getMessage());
         }
 
+        // Add search and filter panel
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        filterPanel.setOpaque(false);
+
+        JTextField searchField = UIUtils.createRoundedTextField();
+        searchField.setPreferredSize(new Dimension(200, 30));
+        searchField.setToolTipText("Search by event title");
+
+        JButton searchButton = UIUtils.createButton("Search", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.SMALL);
+
+        JComboBox<String> statusFilter = UIUtils.createRoundedComboBox(new String[]{"All", "APPROVED", "PENDING", "COMPLETED", "CANCELLED", "REJECTED"});
+        statusFilter.setPreferredSize(new Dimension(150, 30));
+
+        // Add action listeners for search and filter
+        searchButton.addActionListener(e -> {
+            String searchText = searchField.getText().toLowerCase();
+            String selectedStatus = (String) statusFilter.getSelectedItem();
+
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) eventsTable.getModel());
+            eventsTable.setRowSorter(sorter);
+
+            RowFilter<DefaultTableModel, Object> textFilter = RowFilter.regexFilter("(?i)" + searchText, 1); // Search in title column
+
+            if (selectedStatus.equals("All")) {
+                sorter.setRowFilter(textFilter);
+            } else {
+                RowFilter<DefaultTableModel, Object> statusRowFilter = RowFilter.regexFilter("^" + selectedStatus + "$", 5); // Status column
+                sorter.setRowFilter(RowFilter.andFilter(List.of(textFilter, statusRowFilter)));
+            }
+        });
+
+        // Add change listener for status filter
+        statusFilter.addActionListener(e -> {
+            String searchText = searchField.getText().toLowerCase();
+            String selectedStatus = (String) statusFilter.getSelectedItem();
+
+            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) eventsTable.getModel());
+            eventsTable.setRowSorter(sorter);
+
+            if (searchText.isEmpty() && selectedStatus.equals("All")) {
+                sorter.setRowFilter(null);
+            } else if (selectedStatus.equals("All")) {
+                sorter.setRowFilter(RowFilter.regexFilter("(?i)" + searchText, 1)); // Search in title column
+            } else if (searchText.isEmpty()) {
+                sorter.setRowFilter(RowFilter.regexFilter("^" + selectedStatus + "$", 5)); // Status column
+            } else {
+                RowFilter<DefaultTableModel, Object> textFilter = RowFilter.regexFilter("(?i)" + searchText, 1);
+                RowFilter<DefaultTableModel, Object> statusRowFilter = RowFilter.regexFilter("^" + selectedStatus + "$", 5);
+                sorter.setRowFilter(RowFilter.andFilter(List.of(textFilter, statusRowFilter)));
+            }
+        });
+
+        // Add organizer filter
+        JComboBox<String> organizerFilter = UIUtils.createRoundedComboBox(new String[]{"All Organizers"});
+        organizerFilter.setPreferredSize(new Dimension(180, 30));
+
+        // Populate organizer filter with unique organizer names
+        try {
+            List<Event> events = eventController.getAllEvents();
+            Set<String> organizers = new HashSet<>();
+
+            for (Event event : events) {
+                if (event.getOrganizer() != null) {
+                    organizers.add(event.getOrganizer().getName());
+                }
+            }
+
+            for (String organizer : organizers) {
+                organizerFilter.addItem(organizer);
+            }
+
+            // Add action listener for organizer filter
+            organizerFilter.addActionListener(e -> {
+                String searchText = searchField.getText().toLowerCase();
+                String selectedStatus = (String) statusFilter.getSelectedItem();
+                String selectedOrganizer = (String) organizerFilter.getSelectedItem();
+
+                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) eventsTable.getModel());
+                eventsTable.setRowSorter(sorter);
+
+                List<RowFilter<DefaultTableModel, Object>> filters = new ArrayList<>();
+
+                // Add text filter if search text is not empty
+                if (!searchText.isEmpty()) {
+                    filters.add(RowFilter.regexFilter("(?i)" + searchText, 1)); // Title column
+                }
+
+                // Add status filter if not "All"
+                if (!selectedStatus.equals("All")) {
+                    filters.add(RowFilter.regexFilter("^" + selectedStatus + "$", 5)); // Status column
+                }
+
+                // Add organizer filter if not "All Organizers"
+                if (!selectedOrganizer.equals("All Organizers")) {
+                    filters.add(RowFilter.regexFilter("^" + selectedOrganizer + "$", 4)); // Organizer column
+                }
+
+                if (filters.isEmpty()) {
+                    sorter.setRowFilter(null);
+                } else if (filters.size() == 1) {
+                    sorter.setRowFilter(filters.get(0));
+                } else {
+                    sorter.setRowFilter(RowFilter.andFilter(filters));
+                }
+            });
+
+        } catch (SQLException ex) {
+            UIUtils.showError(this, "Error loading organizers: " + ex.getMessage());
+        }
+
+        // Add components to filter panel
+        filterPanel.add(new JLabel("Search:"));
+        filterPanel.add(searchField);
+        filterPanel.add(searchButton);
+        filterPanel.add(new JLabel("Status:"));
+        filterPanel.add(statusFilter);
+        filterPanel.add(new JLabel("Organizer:"));
+        filterPanel.add(organizerFilter);
+
         // Add table to scroll pane
         JScrollPane scrollPane = new JScrollPane(eventsTable);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
+
+        // Add components to content panel
+        contentPanel.add(filterPanel, BorderLayout.NORTH);
         contentPanel.add(scrollPane, BorderLayout.CENTER);
 
         panel.add(contentPanel, BorderLayout.CENTER);
@@ -510,11 +634,11 @@ public class AdminDashboardNew extends JFrame {
     private RoundedPanel createSectionPanel(String title) {
         RoundedPanel panel = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
         panel.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
-        
+
         JLabel titleLabel = UIUtils.createLabel(title, UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
         panel.add(titleLabel, BorderLayout.NORTH);
-        
+
         return panel;
     }
 
@@ -542,7 +666,7 @@ public class AdminDashboardNew extends JFrame {
         addDetailField(contentPanel, gbc, "Status:", user.isActive() ? "Active" : "Inactive");
         addDetailField(contentPanel, gbc, "Registration Date:", user.getRegistrationDate());
         if (user.getLastLoginAt() != null) {
-            addDetailField(contentPanel, gbc, "Last Login:", 
+            addDetailField(contentPanel, gbc, "Last Login:",
                 new SimpleDateFormat("MMM d, yyyy h:mm a").format(user.getLastLoginAt()));
         }
 
@@ -581,7 +705,7 @@ public class AdminDashboardNew extends JFrame {
 
     /**
      * Creates the users panel
-     * 
+     *
      * @return the users panel
      */
     private JPanel createUsersPanel() {
@@ -608,7 +732,7 @@ public class AdminDashboardNew extends JFrame {
         }
 
         panel.add(statsPanel, BorderLayout.NORTH);
-        
+
         // Add the RegisteredUsersView component
         RegisteredUsersView usersView = new RegisteredUsersView();
         panel.add(usersView, BorderLayout.CENTER);
@@ -616,11 +740,11 @@ public class AdminDashboardNew extends JFrame {
         return panel;
     }
 
-   
-   
+
+
     /**
      * Creates the settings panel
-     * 
+     *
      * @return the settings panel
      */
     private JPanel createSettingsPanel() {
@@ -652,18 +776,18 @@ public class AdminDashboardNew extends JFrame {
         // Main content
         JPanel mainContent = UIUtils.createPanel(new BorderLayout(0, 20), false);
         mainContent.setOpaque(false);
-        
+
         // Settings card
         RoundedPanel settingsCard = new RoundedPanel(new BorderLayout(), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
         settingsCard.setBorder(UIUtils.createRoundedBorderWithPadding(AppColors.BORDER, UIConstants.CORNER_RADIUS_MEDIUM, 1, 15));
-        
+
         JLabel settingsTitle = UIUtils.createLabel("SYSTEM CONFIGURATION", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY);
         settingsCard.add(settingsTitle, BorderLayout.NORTH);
 
         // Settings form
         JPanel formPanel = UIUtils.createPanel(new GridBagLayout(), false);
         formPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -678,9 +802,9 @@ public class AdminDashboardNew extends JFrame {
         addSettingField(formPanel, gbc, "Last Backup", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
         addSettingField(formPanel, gbc, "Server Status", "Online");
         addSettingField(formPanel, gbc, "API Status", "Active");
-        
+
         settingsCard.add(formPanel, BorderLayout.CENTER);
-        
+
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actionPanel.setOpaque(false);
         JButton backupBtn = UIUtils.createButton("Backup Database", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
@@ -688,9 +812,9 @@ public class AdminDashboardNew extends JFrame {
         actionPanel.add(backupBtn);
         actionPanel.add(resetBtn);
         settingsCard.add(actionPanel, BorderLayout.SOUTH);
-        
+
         mainContent.add(settingsCard, BorderLayout.NORTH);
-        
+
         panel.add(mainContent, BorderLayout.CENTER);
 
         return panel;
@@ -698,7 +822,7 @@ public class AdminDashboardNew extends JFrame {
 
     /**
      * Adds a setting field to the settings panel
-     * 
+     *
      * @param panel the panel to add the field to
      * @param gbc the grid bag constraints
      * @param label the field label
@@ -892,12 +1016,12 @@ public class AdminDashboardNew extends JFrame {
         try {
             event.setStatus(Event.EventStatus.APPROVED);
             eventController.updateEvent(event);
-            
+
             // Refresh all affected panels
             loadDashboardData();
             refreshPendingApprovals();
             refreshEventsPanel();
-            
+
             UIUtils.showSuccess(this, "Event approved: " + event.getTitle());
         } catch (SQLException ex) {
             UIUtils.showError(this, "Error approving event: " + ex.getMessage());
@@ -911,12 +1035,12 @@ public class AdminDashboardNew extends JFrame {
         try {
             event.setStatus(Event.EventStatus.REJECTED);
             eventController.updateEvent(event);
-            
+
             // Refresh all affected panels
             loadDashboardData();
             refreshPendingApprovals();
             refreshEventsPanel();
-            
+
             UIUtils.showSuccess(this, "Event rejected: " + event.getTitle());
         } catch (SQLException ex) {
             UIUtils.showError(this, "Error rejecting event: " + ex.getMessage());
@@ -936,13 +1060,13 @@ public class AdminDashboardNew extends JFrame {
                     break;
                 }
             }
-            
+
             // Add updated panel
             JPanel newPanel = createPendingApprovalsPanel();
             newPanel.setName("Pending Approvals");
             mainContentPanel.add(newPanel, "Pending Approvals");
             cardLayout.show(mainContentPanel, "Pending Approvals");
-            
+
             // Refresh UI
             mainContentPanel.revalidate();
             mainContentPanel.repaint();
@@ -964,13 +1088,13 @@ public class AdminDashboardNew extends JFrame {
                     break;
                 }
             }
-            
+
             // Add updated panel
             JPanel newPanel = createEventsPanel();
             newPanel.setName("All Events");
             mainContentPanel.add(newPanel, "All Events");
             cardLayout.show(mainContentPanel, "All Events");
-            
+
             // Refresh UI
             mainContentPanel.revalidate();
             mainContentPanel.repaint();
@@ -992,13 +1116,13 @@ public class AdminDashboardNew extends JFrame {
                     break;
                 }
             }
-            
+
             // Add updated panel
             JPanel newPanel = createUsersPanel();
             newPanel.setName("Registered Users");
             mainContentPanel.add(newPanel, "Registered Users");
             cardLayout.show(mainContentPanel, "Registered Users");
-            
+
             // Refresh UI
             mainContentPanel.revalidate();
             mainContentPanel.repaint();
@@ -1193,13 +1317,13 @@ public class AdminDashboardNew extends JFrame {
                 // Basic info fields
                 JTextField nameField = UIUtils.createRoundedTextField();
                 nameField.setText(currentUser.getName());
-                
+
                 JTextField emailField = UIUtils.createRoundedTextField();
                 emailField.setText(currentUser.getEmail());
-                
+
                 JTextField phoneField = UIUtils.createRoundedTextField();
                 phoneField.setText(currentUser.getPhone());
-                
+
                 JTextField roleField = UIUtils.createRoundedTextField();
                 roleField.setText(currentUser.getRole().toString());
                 roleField.setEditable(false);
@@ -1212,7 +1336,7 @@ public class AdminDashboardNew extends JFrame {
                 regDateField.setBackground(AppColors.BACKGROUND_LIGHT);
 
                 JTextField lastLoginField = UIUtils.createRoundedTextField();
-                lastLoginField.setText(currentUser.getLastLoginAt() != null ? 
+                lastLoginField.setText(currentUser.getLastLoginAt() != null ?
                     new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(currentUser.getLastLoginAt()) : "Never");
                 lastLoginField.setEditable(false);
                 lastLoginField.setBackground(AppColors.BACKGROUND_LIGHT);
@@ -1221,27 +1345,27 @@ public class AdminDashboardNew extends JFrame {
                 basicInfoPanel.add(UIUtils.createLabel("User ID:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
                 basicInfoPanel.add(idField, gbc);
                 basicInfoPanel.add(Box.createVerticalStrut(10), gbc);
-                
+
                 basicInfoPanel.add(UIUtils.createLabel("Name:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
                 basicInfoPanel.add(nameField, gbc);
                 basicInfoPanel.add(Box.createVerticalStrut(10), gbc);
-                
+
                 basicInfoPanel.add(UIUtils.createLabel("Email:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
                 basicInfoPanel.add(emailField, gbc);
                 basicInfoPanel.add(Box.createVerticalStrut(10), gbc);
-                
+
                 basicInfoPanel.add(UIUtils.createLabel("Phone:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
                 basicInfoPanel.add(phoneField, gbc);
                 basicInfoPanel.add(Box.createVerticalStrut(10), gbc);
-                
+
                 basicInfoPanel.add(UIUtils.createLabel("Role:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
                 basicInfoPanel.add(roleField, gbc);
                 basicInfoPanel.add(Box.createVerticalStrut(20), gbc);
-                
+
                 basicInfoPanel.add(UIUtils.createLabel("Registration Date:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
                 basicInfoPanel.add(regDateField, gbc);
                 basicInfoPanel.add(Box.createVerticalStrut(10), gbc);
-                
+
                 basicInfoPanel.add(UIUtils.createLabel("Last Login:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbc);
                 basicInfoPanel.add(lastLoginField, gbc);
 
@@ -1267,7 +1391,7 @@ public class AdminDashboardNew extends JFrame {
                 passwordPanel.add(UIUtils.createLabel("New Password:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbcPass);
                 passwordPanel.add(newPasswordField, gbcPass);
                 passwordPanel.add(Box.createVerticalStrut(10), gbcPass);
-                
+
                 passwordPanel.add(UIUtils.createLabel("Confirm Password:", UIConstants.BODY_FONT_BOLD, AppColors.TEXT_PRIMARY), gbcPass);
                 passwordPanel.add(confirmPasswordField, gbcPass);
                 passwordPanel.add(passwordMatchLabel, gbcPass);
@@ -1287,7 +1411,7 @@ public class AdminDashboardNew extends JFrame {
                 requirementsArea.setFont(UIConstants.SMALL_FONT);
                 requirementsArea.setForeground(AppColors.TEXT_SECONDARY);
                 requirementsArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-                
+
                 passwordPanel.add(requirementsArea, gbcPass);
 
                 // Add tabs
@@ -1310,30 +1434,30 @@ public class AdminDashboardNew extends JFrame {
                         String currentPassword = new String(currentPasswordField.getPassword());
                         String newPassword = new String(newPasswordField.getPassword());
                         String confirmPassword = new String(confirmPasswordField.getPassword());
-                        
+
                         if (!newPassword.isEmpty() || !confirmPassword.isEmpty()) {
                             // Verify current password
                             SecurityUtils.VerificationResult verificationResult = SecurityUtils.verifyPassword(currentPassword, currentUser.getPassword());
                             if (!verificationResult.isSuccess()) {
                                 throw new IllegalArgumentException("Current password is incorrect");
                             }
-                            
+
                             if (!newPassword.equals(confirmPassword)) {
                                 throw new IllegalArgumentException("New passwords do not match");
                             }
-                            
+
                             if (!ValidationUtils.isValidPassword(newPassword)) {
                                 throw new IllegalArgumentException("New password does not meet requirements");
                             }
-                            
+
                             // Update password with new hash
                             currentUser.setPassword(SecurityUtils.hashPassword(newPassword));
                         }
-                        
+
                         // Save changes
                         authController.updateUser(currentUser);
                         dialog.dispose();
-                        
+
                         JOptionPane.showMessageDialog(this,
                             "Profile updated successfully",
                             "Success",
@@ -1381,7 +1505,7 @@ public class AdminDashboardNew extends JFrame {
 
     /**
      * Adds a detail field to a panel with a label and value (GridBag version)
-     * 
+     *
      * @param panel The panel to add the field to
      * @param gbc The grid bag constraints
      * @param label The label text
@@ -1401,7 +1525,7 @@ public class AdminDashboardNew extends JFrame {
 
     /**
      * Adds a detail field to a panel with a label and value (Grid version)
-     * 
+     *
      * @param panel The panel to add the field to
      * @param label The label text
      * @param value The value text
@@ -1420,7 +1544,7 @@ public class AdminDashboardNew extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         SwingUtilities.invokeLater(() -> {
             try {
                 new AdminDashboardNew().setVisible(true);
