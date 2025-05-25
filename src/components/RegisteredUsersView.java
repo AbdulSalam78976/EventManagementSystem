@@ -1,14 +1,39 @@
 package components;
 
-import javax.swing.*;
-import javax.swing.table.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.sql.SQLException;
 import java.util.List;
 
+import javax.swing.BorderFactory;
+import javax.swing.DefaultCellEditor;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+
 import controllers.AuthController;
 import models.User;
-import utils.*;
+import utils.AppColors;
+import utils.SimpleDocumentListener;
+import utils.UIConstants;
+import utils.UIUtils;
 
 public class RegisteredUsersView extends JPanel {
     private JTable userTable;
@@ -27,7 +52,7 @@ public class RegisteredUsersView extends JPanel {
             // Title Panel
             RoundedPanel titlePanel = new RoundedPanel(new BorderLayout(), AppColors.PRIMARY_LIGHT, UIConstants.CORNER_RADIUS_MEDIUM);
             titlePanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
-            
+
             JLabel titleLabel = UIUtils.createLabel("Registered Users", UIConstants.TITLE_FONT, AppColors.TEXT_PRIMARY);
             titlePanel.add(titleLabel, BorderLayout.WEST);
 
@@ -60,7 +85,7 @@ public class RegisteredUsersView extends JPanel {
             roleFilter = UIUtils.createRoundedComboBox(new String[]{"All Roles", "Administrator", "Event Organizer", "Attendee"});
             roleFilter.setPreferredSize(new Dimension(150, 30));
             roleFilter.addActionListener(e -> filterUsers());
-            
+
             JLabel roleLabel = UIUtils.createLabel("Role:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
             filtersPanel.add(roleLabel);
             filtersPanel.add(roleFilter);
@@ -69,7 +94,7 @@ public class RegisteredUsersView extends JPanel {
             statusFilter = UIUtils.createRoundedComboBox(new String[]{"All Status", "Active", "Inactive"});
             statusFilter.setPreferredSize(new Dimension(150, 30));
             statusFilter.addActionListener(e -> filterUsers());
-            
+
             JLabel statusLabel = UIUtils.createLabel("Status:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
             filtersPanel.add(statusLabel);
             filtersPanel.add(statusFilter);
@@ -112,13 +137,13 @@ public class RegisteredUsersView extends JPanel {
                 public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                     JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                     label.setHorizontalAlignment(JLabel.CENTER);
-                    
+
                     if ("Active".equals(value)) {
                         label.setForeground(AppColors.SUCCESS);
                     } else {
                         label.setForeground(AppColors.ERROR);
                     }
-                    
+
                     return label;
                 }
             });
@@ -182,14 +207,14 @@ public class RegisteredUsersView extends JPanel {
     private boolean matchesFilter(User user, String searchText, String selectedRole, String selectedStatus) {
         boolean matchesSearch = user.getName().toLowerCase().contains(searchText) ||
                               user.getEmail().toLowerCase().contains(searchText);
-        
+
         boolean matchesRole = selectedRole.equals("All Roles") ||
                             user.getRole().getDisplayName().equals(selectedRole);
-        
+
         boolean matchesStatus = selectedStatus.equals("All Status") ||
                               (selectedStatus.equals("Active") && user.isActive()) ||
                               (selectedStatus.equals("Inactive") && !user.isActive());
-        
+
         return matchesSearch && matchesRole && matchesStatus;
     }
 
@@ -213,7 +238,7 @@ public class RegisteredUsersView extends JPanel {
     private class ButtonRenderer extends JButton implements TableCellRenderer {
         public ButtonRenderer() {
             setOpaque(true);
-            setFont(UIConstants.SMALL_FONT);
+            setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12)); // Support emoji rendering
             setForeground(AppColors.PRIMARY);
             setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
             setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -236,11 +261,11 @@ public class RegisteredUsersView extends JPanel {
             super(checkBox);
             button = new JButton();
             button.setOpaque(true);
-            button.setFont(UIConstants.SMALL_FONT);
+            button.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12)); // Support emoji rendering
             button.setForeground(AppColors.PRIMARY);
             button.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
             button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            
+
             button.addActionListener(e -> fireEditingStopped());
         }
 
@@ -304,4 +329,4 @@ public class RegisteredUsersView extends JPanel {
             UIUtils.showError(this, "Error refreshing user data: " + e.getMessage());
         }
     }
-} 
+}

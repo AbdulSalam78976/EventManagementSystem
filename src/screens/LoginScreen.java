@@ -1,14 +1,36 @@
 package screens;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.SQLException;
 
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+
+import components.RoundedPanel;
 import controllers.AuthController;
 import models.User;
-import utils.*;
-import components.*;
+import utils.AppColors;
+import utils.EmojiUtils;
+import utils.UIConstants;
+import utils.UIUtils;
 
 /**
  * Login screen for the Event Management System
@@ -18,7 +40,7 @@ public class LoginScreen extends JFrame {
     private JPasswordField passwordField;
     private JButton loginButton;
     private JLabel errorLabel;
-    private AuthController authController;
+    private final AuthController authController;
 
     /**
      * Creates a new login screen
@@ -87,38 +109,41 @@ public class LoginScreen extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST; // Align components to the left
 
-        // Email field
+        // Email field with emoji
         JLabel emailLabel = UIUtils.createLabel("Email:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
         gbc.gridy = 0;
         formPanel.add(emailLabel, gbc);
 
         emailField = UIUtils.createRoundedTextField();
         emailField.setColumns(20);
+        JPanel emailFieldPanel = EmojiUtils.createEmojiTextField("📧", emailField);
         gbc.gridy++;
-        formPanel.add(emailField, gbc);
+        formPanel.add(emailFieldPanel, gbc);
 
-        // Password field
+        // Password field with emoji
         JLabel passwordLabel = UIUtils.createLabel("Password:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
         gbc.gridy++;
         formPanel.add(passwordLabel, gbc);
 
         passwordField = UIUtils.createRoundedPasswordField();
         passwordField.setColumns(20);
+        JPanel passwordFieldPanel = EmojiUtils.createEmojiPasswordField("🔒", passwordField);
         gbc.gridy++;
-        formPanel.add(passwordField, gbc);
+        formPanel.add(passwordFieldPanel, gbc);
 
         // Error label
         errorLabel = UIUtils.createLabel(" ", UIConstants.SMALL_FONT, AppColors.ERROR);
         gbc.gridy++;
         formPanel.add(errorLabel, gbc);
 
-        // Login button
+        // Login button with emoji
         loginButton = UIUtils.createButton(
-            "Sign In",
+            "🔐 Sign In",
             null,
             UIUtils.ButtonType.PRIMARY,
             UIUtils.ButtonSize.LARGE_RECTANGULAR
         );
+        loginButton.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
         loginButton.addActionListener(e -> handleLogin());
         gbc.gridy++;
         gbc.fill = GridBagConstraints.HORIZONTAL; // Center button
@@ -212,27 +237,26 @@ public class LoginScreen extends JFrame {
                     SwingUtilities.invokeLater(() -> {
                         try {
                             switch (user.getRole()) {
-                                case ADMIN:
+                                case ADMIN -> {
                                     System.out.println("User is admin, showing admin dashboard");
                                     new AdminDashboardNew().setVisible(true);
-                                    break;
-                                case EVENT_ORGANIZER:
+                                }
+                                case EVENT_ORGANIZER -> {
                                     System.out.println("User is organizer, showing organizer dashboard");
                                     new OrganizerDashboard().setVisible(true);
-                                    break;
-                                case ATTENDEE:
+                                }
+                                case ATTENDEE -> {
                                     System.out.println("User is attendee, showing attendee dashboard");
                                     new AttendeeDashboardNew().setVisible(true);
-                                    break;
-                                default:
+                                }
+                                default -> {
                                     System.out.println("Unknown role, showing error");
                                     UIUtils.showError(this, "Unknown user role: " + user.getRole());
                                     new LoginScreen().setVisible(true);
-                                    break;
+                                }
                             }
                         } catch (SQLException e) {
                             System.err.println("Error creating dashboard: " + e.getMessage());
-                            e.printStackTrace();
                             UIUtils.showError(this, "Error opening dashboard: " + e.getMessage());
                             // If dashboard fails to open, show login screen again
                             try {
@@ -261,7 +285,6 @@ public class LoginScreen extends JFrame {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            e.printStackTrace();
         }
 
         SwingUtilities.invokeLater(() -> {

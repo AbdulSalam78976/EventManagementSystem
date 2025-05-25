@@ -1,44 +1,60 @@
 package components;
 
-import javax.swing.*;
-import javax.swing.border.*;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.Window;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.function.Consumer;
-import utils.AppColors;
-import utils.UIUtils;
-import java.util.Calendar;
+
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
 import controllers.AuthController;
 import controllers.EventController;
 import controllers.NotificationController;
-import models.User;
-import models.User.UserRole;
-import models.Event;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
-import java.sql.SQLException;
-import utils.FileUtils;
 import controllers.UserController;
-import models.Notification;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
+import models.Event;
 import models.Notification.NotificationType;
-import java.util.Arrays;
-import java.io.IOException;
-import java.nio.file.Files;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import utils.UIConstants;
-import components.RoundedPanel;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.io.ByteArrayOutputStream;
+import models.User;
 import screens.AdminDashboardNew;
 import screens.OrganizerDashboard;
+import utils.AppColors;
+import utils.UIConstants;
+import utils.UIUtils;
 
 /**
  * Reusable Create Event Form component
@@ -319,6 +335,7 @@ public class CreateEventForm extends JPanel {
                 Image image = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
                 imageLabel.setIcon(new ImageIcon(image));
                 imageLabel.setText(selectedFile.getName());
+                imageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             } catch (IOException ex) {
                 errorLabel.setText("Error loading image: " + ex.getMessage());
             }

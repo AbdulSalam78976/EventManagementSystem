@@ -1,16 +1,35 @@
 package components;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.event.ActionListener;
 import java.awt.geom.RoundRectangle2D;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.SwingConstants;
+
 import utils.AppColors;
-import utils.UIUtils;
 
 /**
  * Reusable sidebar panel component with consistent styling and improved visuals
@@ -76,7 +95,7 @@ public class SidebarPanel extends JPanel {
 
     /**
      * Loads and resizes an icon from the resources directory
-     * 
+     *
      * @param iconName The name of the icon file (without path)
      * @return The resized ImageIcon, or null if the icon couldn't be loaded
      */
@@ -107,30 +126,8 @@ public class SidebarPanel extends JPanel {
         profilePanel.setMaximumSize(new Dimension(220, 60));
         profilePanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 20, 5));
 
-        // Create avatar panel with first letter of username
-        JPanel avatarPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Draw circle
-                g2.setColor(AVATAR_BG);
-                g2.fillOval(0, 0, getWidth(), getHeight());
-
-                // Draw first letter
-                g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
-
-                String firstLetter = username.substring(0, 1).toUpperCase();
-                FontMetrics fm = g2.getFontMetrics();
-                int x = (getWidth() - fm.stringWidth(firstLetter)) / 2;
-                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
-
-                g2.drawString(firstLetter, x, y);
-                g2.dispose();
-            }
-
+        // Create avatar panel with emoji user icon
+        JPanel avatarPanel = new JPanel(new BorderLayout()) {
             @Override
             public Dimension getPreferredSize() {
                 return new Dimension(45, 45);
@@ -146,6 +143,15 @@ public class SidebarPanel extends JPanel {
                 return getPreferredSize();
             }
         };
+        avatarPanel.setBackground(AVATAR_BG);
+
+        // Add emoji avatar
+        JLabel avatarEmoji = new JLabel("👤");
+        avatarEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+        avatarEmoji.setHorizontalAlignment(SwingConstants.CENTER);
+        avatarEmoji.setVerticalAlignment(SwingConstants.CENTER);
+        avatarEmoji.setForeground(Color.WHITE);
+        avatarPanel.add(avatarEmoji, BorderLayout.CENTER);
 
         JPanel userInfo = new JPanel();
         userInfo.setLayout(new BoxLayout(userInfo, BoxLayout.Y_AXIS));
@@ -214,16 +220,19 @@ public class SidebarPanel extends JPanel {
             }
         };
 
-        // Load and set the icon
-        ImageIcon icon = loadIcon(iconName);
-        if (icon != null) {
-            button.setIcon(icon);
-            button.setIconTextGap(10); // Add space between icon and text
+        // Load and set the icon (only if iconName is provided)
+        if (iconName != null && !iconName.trim().isEmpty()) {
+            ImageIcon icon = loadIcon(iconName);
+            if (icon != null) {
+                button.setIcon(icon);
+                button.setIconTextGap(10); // Add space between icon and text
+            }
         }
 
         // Set button properties
         button.setText(text);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        // Use a font that supports emoji rendering
+        button.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         button.setForeground(Color.WHITE);
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setBorderPainted(false);
@@ -292,7 +301,7 @@ public class SidebarPanel extends JPanel {
         addSectionLabel("ACCOUNT");
 
         // Create logout button with custom styling
-        JButton logoutButton = new JButton("Logout") {
+        JButton logoutButton = new JButton("🚪 Logout") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -314,14 +323,8 @@ public class SidebarPanel extends JPanel {
             }
         };
 
-        // Load and set the logout icon
-        ImageIcon logoutIcon = loadIcon("logout.png");
-        if (logoutIcon != null) {
-            logoutButton.setIcon(logoutIcon);
-            logoutButton.setIconTextGap(10);
-        }
-
-        logoutButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        // Set font to support emoji rendering
+        logoutButton.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
         logoutButton.setForeground(Color.WHITE);
         logoutButton.setHorizontalAlignment(SwingConstants.LEFT);
         logoutButton.setBorderPainted(false);

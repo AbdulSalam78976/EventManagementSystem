@@ -1,22 +1,37 @@
 package components;
 
-import javax.swing.*;
-import java.awt.*;
-import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Image;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+
 import models.Event;
-import utils.*;
+import utils.AppColors;
+import utils.EmojiUtils;
+import utils.UIConstants;
+import utils.UIUtils;
 
 public class EventCard extends RoundedPanel {
     private final Event event;
     private JLabel titleLabel;
-    private JLabel dateLabel;
-    private JLabel venueLabel;
-    private JLabel slotsLabel;
+    private JLabel categoryLabel;
+    private JLabel descriptionLabel;
     private JLabel imageLabel;
-    private JButton viewButton;
+    private JPanel buttonPanel;
 
-    public EventCard(Event event) {
+    public EventCard(Event event, java.util.List<JButton> actionButtons) {
         super(new BorderLayout(15, 0), Color.WHITE, UIConstants.CORNER_RADIUS_MEDIUM);
         this.event = event;
         setBorder(UIUtils.createRoundedBorderWithPadding(
@@ -25,102 +40,81 @@ public class EventCard extends RoundedPanel {
             1,
             15
         ));
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-
-        initializeComponents();
+        setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        initializeComponents(actionButtons);
     }
 
-    private void initializeComponents() {
-        setLayout(new BorderLayout());
-        setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 200)),
-            BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
+    private void initializeComponents(java.util.List<JButton> actionButtons) {
+        setLayout(new BorderLayout(15, 0));
         setBackground(Color.WHITE);
 
-        // Title panel
-        JPanel titlePanel = new JPanel(new BorderLayout());
-        titlePanel.setOpaque(false);
-        titleLabel = new JLabel(event.getTitle());
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titlePanel.add(titleLabel, BorderLayout.CENTER);
-
-        // Date panel
-        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        datePanel.setOpaque(false);
-        dateLabel = new JLabel(event.getEventDate().toLocalDate().toString());
-        dateLabel.setIcon(new ImageIcon(getClass().getResource("/icons/calendar.png")));
-        datePanel.add(dateLabel);
-
-        // Venue panel
-        JPanel venuePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        venuePanel.setOpaque(false);
-        venueLabel = new JLabel(event.getVenueName());
-        venueLabel.setIcon(new ImageIcon(getClass().getResource("/icons/location.png")));
-        venuePanel.add(venueLabel);
-
-        // Slots panel
-        JPanel slotsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        slotsPanel.setOpaque(false);
-        slotsLabel = new JLabel("Available Slots: " + event.getTotalSlots());
-        slotsLabel.setIcon(new ImageIcon(getClass().getResource("/icons/users.png")));
-        slotsPanel.add(slotsLabel);
-
-        // Image panel
+        // --- Image/Icon ---
         JPanel imagePanel = new JPanel(new BorderLayout());
         imagePanel.setOpaque(false);
         if (event.getMainImage() != null) {
             ImageIcon icon = new ImageIcon(event.getMainImage());
-            Image image = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
+            Image image = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
             imageLabel = new JLabel(new ImageIcon(image));
         } else {
-            imageLabel = new JLabel("No image available");
+            // Use emoji placeholder based on event category
+            String categoryEmoji = EmojiUtils.getEventCategoryEmoji(event.getCategory());
+            imageLabel = new JLabel(categoryEmoji);
+            imageLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
+            imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            imageLabel.setVerticalAlignment(SwingConstants.CENTER);
+            imageLabel.setPreferredSize(new Dimension(100, 100));
+            imageLabel.setBackground(new Color(248, 249, 250));
+            imageLabel.setOpaque(true);
+            imageLabel.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 1));
         }
         imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         imagePanel.add(imageLabel, BorderLayout.CENTER);
 
-        // Details panel
+        // --- Details ---
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setOpaque(false);
-        detailsPanel.add(titlePanel);
-        detailsPanel.add(Box.createVerticalStrut(10));
-        detailsPanel.add(datePanel);
-        detailsPanel.add(Box.createVerticalStrut(5));
-        detailsPanel.add(venuePanel);
-        detailsPanel.add(Box.createVerticalStrut(5));
-        detailsPanel.add(slotsPanel);
 
-        // Main content panel
-        JPanel contentPanel = new JPanel(new BorderLayout(10, 0));
-        contentPanel.setOpaque(false);
-        contentPanel.add(imagePanel, BorderLayout.WEST);
-        contentPanel.add(detailsPanel, BorderLayout.CENTER);
+        // Title
+        titleLabel = new JLabel(event.getTitle());
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(AppColors.TEXT_PRIMARY);
+        detailsPanel.add(titleLabel);
 
-        // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // Category badge
+        String category = event.getCategory() != null ? event.getCategory() : "Uncategorized";
+        categoryLabel = new JLabel(category.toUpperCase());
+        categoryLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        categoryLabel.setOpaque(true);
+        categoryLabel.setBackground(new Color(220, 235, 255));
+        categoryLabel.setForeground(AppColors.PRIMARY_DARK);
+        categoryLabel.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+        categoryLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.add(Box.createVerticalStrut(5));
+        detailsPanel.add(categoryLabel);
+
+        // Description (short preview)
+        String desc = event.getDescription() != null ? event.getDescription() : "";
+        if (desc.length() > 100) desc = desc.substring(0, 100) + "...";
+        descriptionLabel = new JLabel("<html><div style='width:220px;'>" + desc + "</div></html>");
+        descriptionLabel.setFont(UIConstants.BODY_FONT);
+        descriptionLabel.setForeground(AppColors.TEXT_SECONDARY);
+        descriptionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailsPanel.add(Box.createVerticalStrut(8));
+        detailsPanel.add(descriptionLabel);
+
+        // --- Button Panel ---
+        buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
-        viewButton = new JButton("View Details");
-        viewButton.addActionListener(e -> onViewDetails());
-        buttonPanel.add(viewButton);
+        if (actionButtons != null) {
+            for (JButton btn : actionButtons) {
+                buttonPanel.add(btn);
+            }
+        }
 
-        add(contentPanel, BorderLayout.CENTER);
+        // --- Layout ---
+        add(imagePanel, BorderLayout.WEST);
+        add(detailsPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
     }
-
-    private void handleRegistration() {
-        // TODO: Implement registration logic
-        JOptionPane.showMessageDialog(this,
-            "Registration functionality will be implemented soon.",
-            "Coming Soon",
-            JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void onViewDetails() {
-        // TODO: Implement view details logic
-        JOptionPane.showMessageDialog(this,
-            "View details functionality will be implemented soon.",
-            "Coming Soon",
-            JOptionPane.INFORMATION_MESSAGE);
-    }
-} 
+}

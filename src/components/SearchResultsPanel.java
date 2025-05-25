@@ -84,8 +84,38 @@ public class SearchResultsPanel extends JPanel {
         } else {
             for (Event event : events) {
                 if (event == null) continue;
-                
-                EventCard card = new EventCard(event);
+                java.util.List<JButton> buttons = new java.util.ArrayList<>();
+                JButton viewBtn = UIUtils.createButton(
+                    "View Details",
+                    null,
+                    UIUtils.ButtonType.SECONDARY,
+                    UIUtils.ButtonSize.SMALL
+                );
+                viewBtn.addActionListener(e -> {
+                    try {
+                        Window owner = SwingUtilities.getWindowAncestor(this);
+                        JDialog dialog;
+                        if (owner instanceof Dialog) {
+                            dialog = new JDialog((Dialog) owner, "Event Details", true);
+                        } else {
+                            dialog = new JDialog((Frame) owner, "Event Details", true);
+                        }
+                        dialog.setSize(700, 600);
+                        dialog.setLocationRelativeTo(this);
+                        dialog.setLayout(new BorderLayout());
+                        dialog.add(new EventDetailsPanel(event), BorderLayout.CENTER);
+                        JButton closeBtn = UIUtils.createButton("Close", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
+                        closeBtn.addActionListener(ev -> dialog.dispose());
+                        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+                        btnPanel.add(closeBtn);
+                        dialog.add(btnPanel, BorderLayout.SOUTH);
+                        dialog.setVisible(true);
+                    } catch (Exception ex) {
+                        showError("Error loading event details: " + ex.getMessage());
+                    }
+                });
+                buttons.add(viewBtn);
+                EventCard card = new EventCard(event, buttons);
                 card.setAlignmentX(Component.LEFT_ALIGNMENT);
                 resultsPanel.add(card);
                 resultsPanel.add(Box.createVerticalStrut(10));

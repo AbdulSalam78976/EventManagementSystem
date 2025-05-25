@@ -1,11 +1,21 @@
 package components;
 
-import javax.swing.*;
-import javax.swing.table.*;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JTable;
+import javax.swing.table.TableCellRenderer;
+
 import utils.AppColors;
-import utils.UIUtils;
 import utils.UIConstants;
 
 /**
@@ -14,7 +24,7 @@ import utils.UIConstants;
 public class ButtonRenderer extends JButton implements TableCellRenderer {
     public ButtonRenderer() {
         setOpaque(true);
-        setFont(UIConstants.SMALL_FONT);
+        setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12)); // Support emoji rendering
         setForeground(Color.WHITE);
         setBorderPainted(false);
         setFocusPainted(false);

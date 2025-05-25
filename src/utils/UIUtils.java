@@ -9,7 +9,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.ActionListener;
 import components.RoundedPanel;
 import java.util.Objects;
-import java.net.URL;
 
 /**
  * Utility class for UI components with consistent styling
@@ -161,14 +160,13 @@ public class UIUtils {
     public static JButton createSidebarNavButton(String text, String iconName, ActionListener listener) {
         JButton button = new JButton(text);
 
-        // Load and set icon if provided
+        // Use emoji instead of icon files
         if (iconName != null) {
-            ImageIcon icon = IconUtils.loadIcon(iconName, IconUtils.ICON_SIZE_NORMAL); // Assuming default icon size for sidebar
-            if (icon != null) {
-                button.setIcon(icon);
-                button.setHorizontalAlignment(SwingConstants.LEFT);
-                button.setIconTextGap(10);
-            }
+            // If iconName is actually an emoji, use it directly
+            String displayText = iconName + " " + text;
+            button.setText(displayText);
+            button.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+            button.setHorizontalAlignment(SwingConstants.LEFT);
         }
 
         // Set button properties
@@ -470,13 +468,12 @@ public class UIUtils {
     public static JButton createButton(String text, String iconName, ButtonType type, ButtonSize size) {
         JButton button = new JButton(text);
 
-        // Load and set icon if provided
+        // Use emoji instead of icon files
         if (iconName != null) {
-            ImageIcon icon = IconUtils.loadIcon(iconName, IconUtils.ICON_SIZE_NORMAL);
-            if (icon != null) {
-                button.setIcon(icon);
-                button.setIconTextGap(10);
-            }
+            // If iconName is actually an emoji, use it directly
+            String displayText = iconName + " " + text;
+            button.setText(displayText);
+            button.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         }
 
         // Set button properties based on type
@@ -694,18 +691,16 @@ public class UIUtils {
          contentPanel.add(titleLabel, BorderLayout.NORTH);
          contentPanel.add(valueLabel, BorderLayout.CENTER);
 
-         // Add icon if provided
+         // Add emoji icon if provided
         if (iconName != null) {
-            ImageIcon icon = IconUtils.loadIcon(iconName, IconUtils.ICON_SIZE_NORMAL); // Load icon
-            if (icon != null) {
-                 JLabel iconLabel = new JLabel(icon);
-                 iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                 // Add icon above the title or adjust layout as needed
-                 // For simplicity, adding it to the north of a wrapper panel
-                 JPanel iconWrapper = createPanel(new FlowLayout(FlowLayout.CENTER), false);
-                 iconWrapper.add(iconLabel);
-                 contentPanel.add(iconWrapper, BorderLayout.WEST); // Or another suitable position
-            }
+            JLabel iconLabel = new JLabel(iconName);
+            iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 24));
+            iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            // Add icon above the title or adjust layout as needed
+            // For simplicity, adding it to the north of a wrapper panel
+            JPanel iconWrapper = createPanel(new FlowLayout(FlowLayout.CENTER), false);
+            iconWrapper.add(iconLabel);
+            contentPanel.add(iconWrapper, BorderLayout.WEST); // Or another suitable position
         }
 
         card.add(contentPanel, BorderLayout.CENTER);
@@ -762,17 +757,13 @@ public class UIUtils {
         return panel;
     }
 
-    // Helper method to create ImageIcons from resources
-    public static ImageIcon createImageIcon(String path, int size) {
-        URL imgURL = UIUtils.class.getResource("/resources/images/" + path + ".png");
-        if (imgURL != null) {
-            ImageIcon originalIcon = new ImageIcon(imgURL);
-            Image img = originalIcon.getImage();
-            Image scaledImg = img.getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH);
-            return new ImageIcon(scaledImg);
-        } else {
-            System.err.println("Couldn't find file: " + path);
-            return null;
-        }
+    // Helper method to create emoji labels for consistent styling
+    public static JLabel createEmojiLabel(String emoji, String text, int fontSize) {
+        return EmojiUtils.createEmojiLabel(emoji, text, fontSize);
+    }
+
+    // Helper method to create emoji buttons for consistent styling
+    public static JButton createEmojiButton(String emoji, String text, int fontSize) {
+        return EmojiUtils.createEmojiButton(emoji, text, fontSize);
     }
 }

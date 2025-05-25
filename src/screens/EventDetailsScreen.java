@@ -1,28 +1,35 @@
 package screens;
 
-import javax.swing.*;
-import javax.swing.border.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import utils.AppColors;
-import utils.UIUtils;
-import components.EventRegistrationDialog;
-import components.GradientButton;
-import components.HeaderPanel;
-import components.RoundedPanel;
-import models.Feedback;
-import models.User;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Image;
+import java.sql.SQLException;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+
+import controllers.EventController;
+import controllers.FeedbackController;
+import controllers.RegistrationController;
 import models.Event;
 import models.Registration;
-import controllers.FeedbackController;
-import controllers.EventController;
-import controllers.RegistrationController;
-import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import models.User;
+import utils.EmojiUtils;
 
 /**
  * Event Details Screen
@@ -39,7 +46,7 @@ public class EventDetailsScreen extends JFrame {
 
     public EventDetailsScreen(int eventId, User currentUser) {
         this.currentUser = currentUser;
-        
+
         try {
             this.feedbackController = FeedbackController.getInstance();
             this.eventController = EventController.getInstance();
@@ -103,9 +110,17 @@ public class EventDetailsScreen extends JFrame {
             imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
             imagePanel.add(imageLabel, BorderLayout.CENTER);
         } else {
-            JLabel noImageLabel = new JLabel("No image available");
-            noImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            imagePanel.add(noImageLabel, BorderLayout.CENTER);
+            // Use emoji placeholder based on event category
+            String categoryEmoji = EmojiUtils.getEventCategoryEmoji(event.getCategory());
+            JLabel emojiLabel = new JLabel(categoryEmoji);
+            emojiLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 120));
+            emojiLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            emojiLabel.setVerticalAlignment(SwingConstants.CENTER);
+            emojiLabel.setPreferredSize(new Dimension(400, 400));
+            emojiLabel.setBackground(new Color(248, 249, 250));
+            emojiLabel.setOpaque(true);
+            emojiLabel.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 2));
+            imagePanel.add(emojiLabel, BorderLayout.CENTER);
         }
 
         // Details panel
@@ -246,7 +261,7 @@ public class EventDetailsScreen extends JFrame {
 
             // Register the user
             Registration registration = registrationController.registerForEvent(currentUser, event.getId());
-            
+
             // Update UI
             isRegistered = true;
             refreshUI();

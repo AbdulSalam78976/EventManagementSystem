@@ -1,13 +1,14 @@
 package components;
 
-import javax.swing.*;
-import javax.swing.table.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.function.Consumer;
-import utils.AppColors;
-import utils.UIUtils;
-import utils.UIConstants;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.DefaultCellEditor;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JTable;
 
 /**
  * A custom cell editor for table buttons
@@ -22,6 +23,7 @@ public class ButtonEditor extends DefaultCellEditor {
         super(checkBox);
         button = new JButton();
         button.setOpaque(true);
+        button.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12)); // Support emoji rendering
         button.addActionListener(e -> fireEditingStopped());
     }
 

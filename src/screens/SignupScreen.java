@@ -1,15 +1,40 @@
 package screens;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.SQLException;
 
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+
+import components.RoundedPanel;
 import controllers.AuthController;
 import controllers.UserController;
 import models.User;
-import utils.*;
-import components.*;
+import utils.AppColors;
+import utils.EmojiUtils;
+import utils.UIConstants;
+import utils.UIUtils;
+import utils.ValidationUtils;
 
 public class SignupScreen extends JFrame {
     private JTextField nameField;
@@ -117,66 +142,71 @@ public class SignupScreen extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.CENTER;
 
-        // Name field
+        // Name field with emoji
         JLabel nameLabel = UIUtils.createLabel("Full Name:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
         gbc.gridy = 0;
         formPanel.add(nameLabel, gbc);
 
         nameField = UIUtils.createRoundedTextField();
         nameField.setColumns(20);
+        JPanel nameFieldPanel = EmojiUtils.createEmojiTextField("👤", nameField);
         gbc.gridy++;
-        formPanel.add(nameField, gbc);
+        formPanel.add(nameFieldPanel, gbc);
 
-        // Email field
+        // Email field with emoji
         JLabel emailLabel = UIUtils.createLabel("Email:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
         gbc.gridy++;
         formPanel.add(emailLabel, gbc);
 
         emailField = UIUtils.createRoundedTextField();
         emailField.setColumns(20);
+        JPanel emailFieldPanel = EmojiUtils.createEmojiTextField("📧", emailField);
         gbc.gridy++;
-        formPanel.add(emailField, gbc);
+        formPanel.add(emailFieldPanel, gbc);
 
-        // Password field
+        // Password field with emoji
         JLabel passwordLabel = UIUtils.createLabel("Password:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
         gbc.gridy++;
         formPanel.add(passwordLabel, gbc);
 
         passwordField = UIUtils.createRoundedPasswordField();
         passwordField.setColumns(20);
+        JPanel passwordFieldPanel = EmojiUtils.createEmojiPasswordField("🔒", passwordField);
         gbc.gridy++;
-        formPanel.add(passwordField, gbc);
+        formPanel.add(passwordFieldPanel, gbc);
 
-        // Role selection
+        // Role selection with emoji
         JLabel roleLabel = UIUtils.createLabel("Role:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
         gbc.gridy++;
         formPanel.add(roleLabel, gbc);
 
         roleComboBox = new JComboBox<>(new String[]{
-            "Event Organizer",
-            "Attendee"
+            "🎯 Event Organizer",
+            "👤 Attendee"
         });
-        roleComboBox.setFont(UIConstants.BODY_FONT);
+        roleComboBox.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         roleComboBox.setBackground(Color.WHITE);
         roleComboBox.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(AppColors.BORDER),
             BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
+        JPanel roleFieldPanel = EmojiUtils.createEmojiComboBox("👑", roleComboBox);
         gbc.gridy++;
-        formPanel.add(roleComboBox, gbc);
+        formPanel.add(roleFieldPanel, gbc);
 
         // Error label
         errorLabel = UIUtils.createLabel(" ", UIConstants.SMALL_FONT, AppColors.ERROR);
         gbc.gridy++;
         formPanel.add(errorLabel, gbc);
 
-        // Sign up button
+        // Sign up button with emoji
         signupButton = UIUtils.createButton(
-            "Create Account",
+            "✨ Create Account",
             null,
             UIUtils.ButtonType.PRIMARY,
             UIUtils.ButtonSize.LARGE
         );
+        signupButton.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
         signupButton.addActionListener(e -> handleSignup());
         gbc.gridy++;
         gbc.insets = new Insets(20, 10, 10, 10);
@@ -274,13 +304,15 @@ public class SignupScreen extends JFrame {
 
         securityQuestion1Combo = new JComboBox<>(SECURITY_QUESTIONS);
         securityQuestion1Combo.setFont(UIConstants.BODY_FONT);
+        JPanel question1ComboPanel = EmojiUtils.createEmojiComboBox("❓", securityQuestion1Combo);
         gbc.gridy++;
-        formPanel.add(securityQuestion1Combo, gbc);
+        formPanel.add(question1ComboPanel, gbc);
 
         securityAnswer1Field = UIUtils.createRoundedTextField();
         securityAnswer1Field.setColumns(20);
+        JPanel answer1FieldPanel = EmojiUtils.createEmojiTextField("💬", securityAnswer1Field);
         gbc.gridy++;
-        formPanel.add(securityAnswer1Field, gbc);
+        formPanel.add(answer1FieldPanel, gbc);
 
         // Second security question
         JLabel question2Label = UIUtils.createLabel("Security Question 2:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
@@ -289,26 +321,29 @@ public class SignupScreen extends JFrame {
 
         securityQuestion2Combo = new JComboBox<>(SECURITY_QUESTIONS);
         securityQuestion2Combo.setFont(UIConstants.BODY_FONT);
+        JPanel question2ComboPanel = EmojiUtils.createEmojiComboBox("❓", securityQuestion2Combo);
         gbc.gridy++;
-        formPanel.add(securityQuestion2Combo, gbc);
+        formPanel.add(question2ComboPanel, gbc);
 
         securityAnswer2Field = UIUtils.createRoundedTextField();
         securityAnswer2Field.setColumns(20);
+        JPanel answer2FieldPanel = EmojiUtils.createEmojiTextField("💬", securityAnswer2Field);
         gbc.gridy++;
-        formPanel.add(securityAnswer2Field, gbc);
+        formPanel.add(answer2FieldPanel, gbc);
 
         // Error label
         errorLabel = UIUtils.createLabel(" ", UIConstants.SMALL_FONT, AppColors.ERROR);
         gbc.gridy++;
         formPanel.add(errorLabel, gbc);
 
-        // Submit button
+        // Submit button with emoji
         JButton submitButton = UIUtils.createButton(
-            "Complete Registration",
+            "🎉 Complete Registration",
             null,
             UIUtils.ButtonType.PRIMARY,
             UIUtils.ButtonSize.LARGE
         );
+        submitButton.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
         submitButton.addActionListener(e -> handleSecurityQuestions());
         gbc.gridy++;
         gbc.insets = new Insets(20, 10, 10, 10);
@@ -382,10 +417,10 @@ public class SignupScreen extends JFrame {
 
             // Create temporary user object to store in class field
             user = new User(name, email, password, User.UserRole.fromString(role));
-            
+
             // Show security questions panel
             cardLayout.show(mainPanel, "SECURITY");
-            
+
         } catch (SQLException e) {
             System.out.println("SQL Exception during registration: " + e.getMessage());
             e.printStackTrace();
@@ -444,7 +479,7 @@ public class SignupScreen extends JFrame {
                     "Registration successful! Please login with your new account.",
                     "Registration Complete",
                     JOptionPane.INFORMATION_MESSAGE);
-                
+
                 dispose();
                 new LoginScreen().setVisible(true);
             } else {

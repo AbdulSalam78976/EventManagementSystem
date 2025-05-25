@@ -131,12 +131,12 @@ public class AdminDashboardNew extends JFrame {
 
         SidebarPanel sidebarPanel = new SidebarPanel(cardLayout, mainContentPanel, username, "Admin");
 
-        // Add navigation buttons with proper icons
-        sidebarPanel.addNavButton("Dashboard", "dashboard.png", "Dashboard", true);
-        sidebarPanel.addNavButton("Pending Approvals", "notification.png", "Pending Approvals", false);
-        sidebarPanel.addNavButton("All Events", "calendar.png", "All Events", false);
-        sidebarPanel.addNavButton("Create Event", "create-event.png", "Create Event", false);
-        sidebarPanel.addNavButton("Registered Users", "users.png", "Registered Users", false);
+        // Add navigation buttons with emoji icons
+        sidebarPanel.addNavButton("🏠 Dashboard", null, "Dashboard", true);
+        sidebarPanel.addNavButton("⏳ Pending Approvals", null, "Pending Approvals", false);
+        sidebarPanel.addNavButton("📅 All Events", null, "All Events", false);
+        sidebarPanel.addNavButton("➕ Create Event", null, "Create Event", false);
+        sidebarPanel.addNavButton("👥 Registered Users", null, "Registered Users", false);
 
         // Add refresh actions to buttons
         sidebarPanel.addNavButtonActionListener("Dashboard", e -> loadDashboardData());
@@ -145,11 +145,11 @@ public class AdminDashboardNew extends JFrame {
         sidebarPanel.addNavButtonActionListener("Registered Users", e -> refreshUsersPanel());
 
         sidebarPanel.addSectionLabel("SYSTEM");
-        sidebarPanel.addNavButton("System Settings", "setting.png", "System Settings", false);
+        sidebarPanel.addNavButton("⚙️ System Settings", null, "System Settings", false);
 
         // Add profile and logout in ACCOUNT section
         sidebarPanel.addSectionLabel("ACCOUNT");
-        sidebarPanel.addNavButton("My Profile", "user.png", "My Profile", false);
+        sidebarPanel.addNavButton("👤 My Profile", null, "My Profile", false);
         sidebarPanel.addLogoutButton(e -> handleLogout());
 
         // Add content cards

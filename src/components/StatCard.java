@@ -1,11 +1,16 @@
 package components;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+
 import utils.AppColors;
 import utils.UIConstants;
 import utils.UIUtils;
-
-import javax.swing.*;
-import java.awt.*;
 
 public class StatCard extends RoundedPanel {
     private final JLabel titleLabel;
@@ -37,13 +42,14 @@ public class StatCard extends RoundedPanel {
         );
         valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        // Create icon label if provided
+        // Create icon label if provided (with emoji support)
         if (icon != null && !icon.isEmpty()) {
             iconLabel = UIUtils.createLabel(
                 icon,
                 UIConstants.DASHBOARD_NUMBER_FONT,
                 valueColor
             );
+            iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 24)); // Support emoji rendering
             iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
             add(iconLabel, BorderLayout.WEST);
         } else {
@@ -55,7 +61,7 @@ public class StatCard extends RoundedPanel {
         contentPanel.setOpaque(false);
         contentPanel.add(titleLabel, BorderLayout.NORTH);
         contentPanel.add(valueLabel, BorderLayout.CENTER);
-        
+
         add(contentPanel, BorderLayout.CENTER);
     }
 
@@ -66,4 +72,4 @@ public class StatCard extends RoundedPanel {
     public void updateTitle(String title) {
         titleLabel.setText(title);
     }
-} 
+}

@@ -1,7 +1,18 @@
 package components;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRootPane;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+
 import utils.AppColors;
 import utils.UIConstants;
 
@@ -13,7 +24,7 @@ public class LoadingPanel extends JPanel {
     private final JLabel spinnerLabel;
     private Timer spinnerTimer;
     private int spinnerIndex = 0;
-    private static final String[] SPINNER_FRAMES = {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"};
+    private static final String[] SPINNER_FRAMES = {"🔄", "🔃", "🔄", "🔃", "🔄", "🔃", "🔄", "🔃", "🔄", "🔃"};
 
     /**
      * Creates a new loading panel with a default message
@@ -24,7 +35,7 @@ public class LoadingPanel extends JPanel {
 
     /**
      * Creates a new loading panel with a custom message
-     * 
+     *
      * @param message The message to display while loading
      */
     public LoadingPanel(String message) {
@@ -33,9 +44,9 @@ public class LoadingPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Spinner label
+        // Spinner label with emoji support
         spinnerLabel = new JLabel(SPINNER_FRAMES[0]);
-        spinnerLabel.setFont(UIConstants.TITLE_FONT);
+        spinnerLabel.setFont(new java.awt.Font("Segoe UI Emoji", java.awt.Font.PLAIN, 24));
         spinnerLabel.setForeground(AppColors.PRIMARY);
         spinnerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         add(spinnerLabel);
@@ -76,7 +87,7 @@ public class LoadingPanel extends JPanel {
 
     /**
      * Updates the loading message
-     * 
+     *
      * @param message The new message to display
      */
     public void setMessage(String message) {
@@ -85,7 +96,7 @@ public class LoadingPanel extends JPanel {
 
     /**
      * Shows the loading panel in a glass pane
-     * 
+     *
      * @param parent The parent component to show the loading panel over
      * @return The created loading panel
      */
@@ -118,7 +129,7 @@ public class LoadingPanel extends JPanel {
 
     /**
      * Hides the loading panel from the glass pane
-     * 
+     *
      * @param parent The parent component
      */
     public static void hideFromGlassPane(Component parent) {
@@ -127,4 +138,4 @@ public class LoadingPanel extends JPanel {
             rootPane.getGlassPane().setVisible(false);
         }
     }
-} 
+}

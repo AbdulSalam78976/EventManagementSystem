@@ -1,46 +1,72 @@
 package screens;
 
-import controllers.AuthController;
-import controllers.RegistrationController;
-import controllers.EventController;
-import models.User;
-import models.Event;
-import models.Registration;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.geom.RoundRectangle2D;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableRowSorter;
-import javax.swing.table.TableColumn;
-import javax.swing.table.TableCellRenderer;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableCellEditor;
-import javax.swing.DefaultCellEditor;
-import javax.swing.JCheckBox;
-import javax.swing.JButton;
-import javax.swing.JOptionPane;
-import javax.swing.RowFilter;
-import utils.*;
-import components.*;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
-import models.Event.EventStatus;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultCellEditor;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.RowFilter;
+import javax.swing.SpinnerDateModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableRowSorter;
+
+import components.CreateEventForm;
 import components.EventDetailsPanel;
 import components.GradientButton;
+import components.HeaderPanel;
+import components.MediaUploadPanel;
+import components.ParticipantsPanel;
 import components.ProfilePanel;
+import components.RoundedPanel;
+import components.SidebarPanel;
+import controllers.AuthController;
+import controllers.EventController;
+import controllers.RegistrationController;
+import models.Event;
+import models.Event.EventStatus;
+import models.Registration;
+import models.User;
+import utils.AppColors;
+import utils.UIConstants;
+import utils.UIUtils;
 
 /**
  * Organizer Dashboard
@@ -122,13 +148,13 @@ public class OrganizerDashboard extends JFrame {
         HeaderPanel headerPanel = new HeaderPanel(username, "Event Organizer");
         SidebarPanel sidebarPanel = new SidebarPanel(contentLayout, contentPanel, username, "Event Organizer");
 
-        // Add navigation buttons
-        sidebarPanel.addNavButton("Dashboard", "", "Dashboard", true);
-        sidebarPanel.addNavButton("My Events", "", "My Events", false);
-        sidebarPanel.addNavButton("Create Event", "", "Create Event", false);
-        sidebarPanel.addNavButton("Participants", "", "Participants", false);
-        sidebarPanel.addNavButton("Media Upload", "", "Media Upload", false);
-        sidebarPanel.addNavButton("Profile", "", "Profile", false);
+        // Add navigation buttons with emoji icons
+        sidebarPanel.addNavButton("🏠 Dashboard", null, "Dashboard", true);
+        sidebarPanel.addNavButton("📅 My Events", null, "My Events", false);
+        sidebarPanel.addNavButton("➕ Create Event", null, "Create Event", false);
+        sidebarPanel.addNavButton("👥 Participants", null, "Participants", false);
+        sidebarPanel.addNavButton("📸 Media Upload", null, "Media Upload", false);
+        sidebarPanel.addNavButton("👤 Profile", null, "Profile", false);
         sidebarPanel.addLogoutButton(e -> handleLogout());
 
         // Add content cards

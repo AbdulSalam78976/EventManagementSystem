@@ -1,21 +1,41 @@
 package components;
 
-import javax.swing.*;
-import javax.swing.border.*;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Rectangle;
 import java.sql.SQLException;
+import java.util.function.Consumer;
+
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+
+import controllers.AuthController;
+import models.User;
 import utils.AppColors;
+import utils.EmojiUtils;
+import utils.SecurityUtils;
+import utils.UIConstants;
 import utils.UIUtils;
 import utils.ValidationUtils;
-import models.User;
-import utils.UIConstants;
-import utils.SecurityUtils;
-import utils.IconUtils;
-import controllers.AuthController;
-import controllers.SessionManager;
-import java.util.function.Consumer;
-import java.awt.geom.Ellipse2D;
 
 /**
  * A reusable panel for displaying and editing user profile information
@@ -72,29 +92,20 @@ public class ProfilePanel extends JPanel {
         JPanel userInfoPanel = new JPanel(new BorderLayout(10, 5));
         userInfoPanel.setOpaque(false);
 
-        // --- Avatar with initials ---
-        JPanel avatarPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                int size = 60;
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(AppColors.PRIMARY_DARK);
-                g2.fill(new Ellipse2D.Double(0, 0, size, size));
-                g2.setColor(Color.WHITE);
-                String initials = getInitials(currentUser.getName());
-                Font font = UIConstants.HEADER_FONT.deriveFont(Font.BOLD, 28f);
-                g2.setFont(font);
-                FontMetrics fm = g2.getFontMetrics();
-                int x = (size - fm.stringWidth(initials)) / 2;
-                int y = (size - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(initials, x, y);
-                g2.dispose();
-            }
-        };
+        // --- Avatar with emoji ---
+        JPanel avatarPanel = new JPanel(new BorderLayout());
         avatarPanel.setPreferredSize(new Dimension(60, 60));
-        avatarPanel.setOpaque(false);
+        avatarPanel.setBackground(AppColors.PRIMARY_DARK);
+        avatarPanel.setOpaque(true);
+
+        // Add emoji avatar based on user role
+        String roleEmoji = EmojiUtils.getUserRoleEmoji(currentUser.getRole().name());
+        JLabel avatarEmoji = new JLabel(roleEmoji);
+        avatarEmoji.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+        avatarEmoji.setHorizontalAlignment(SwingConstants.CENTER);
+        avatarEmoji.setVerticalAlignment(SwingConstants.CENTER);
+        avatarEmoji.setForeground(Color.WHITE);
+        avatarPanel.add(avatarEmoji, BorderLayout.CENTER);
         userInfoPanel.add(avatarPanel, BorderLayout.WEST);
 
         // User name and role
@@ -110,9 +121,9 @@ public class ProfilePanel extends JPanel {
         headerPanel.add(userInfoPanel, BorderLayout.WEST);
 
         if (editable) {
-            editButton = UIUtils.createButton(isEditing ? "Save Changes" : "Edit Profile",
-                "edit", UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.LARGE);
-            editButton.setFont(UIConstants.BODY_FONT_BOLD);
+            editButton = UIUtils.createButton(isEditing ? "💾 Save Changes" : "✏️ Edit Profile",
+                null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.LARGE);
+            editButton.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
             editButton.addActionListener(e -> toggleEditMode(editButton));
             headerPanel.add(editButton, BorderLayout.EAST);
         }
@@ -183,20 +194,21 @@ public class ProfilePanel extends JPanel {
         emailField.setText(currentUser.getEmail());
         phoneField.setText(currentUser.getPhone());
 
-        // Add fields to panel
+        // Add fields to panel with emoji icons
         if (isEditing) {
-            addEditableFieldWithIcon(formPanel, gbc, "Full Name", nameField, "user");
-            addEditableFieldWithIcon(formPanel, gbc, "Email Address", emailField, "email");
-            addEditableFieldWithIcon(formPanel, gbc, "Phone Number", phoneField, "phone");
+            addEditableFieldWithIcon(formPanel, gbc, "Full Name", nameField, "👤");
+            addEditableFieldWithIcon(formPanel, gbc, "Email Address", emailField, "📧");
+            addEditableFieldWithIcon(formPanel, gbc, "Phone Number", phoneField, "📱");
         } else {
-            addDetailFieldWithIcon(formPanel, gbc, "Full Name", currentUser.getName(), "user");
-            addDetailFieldWithIcon(formPanel, gbc, "Email Address", currentUser.getEmail(), "email");
-            addDetailFieldWithIcon(formPanel, gbc, "Phone Number", currentUser.getPhone(), "phone");
+            addDetailFieldWithIcon(formPanel, gbc, "Full Name", currentUser.getName(), "👤");
+            addDetailFieldWithIcon(formPanel, gbc, "Email Address", currentUser.getEmail(), "📧");
+            addDetailFieldWithIcon(formPanel, gbc, "Phone Number", currentUser.getPhone(), "📱");
         }
 
-        // Add non-editable fields with icons
-        addDetailFieldWithIcon(formPanel, gbc, "Role", currentUser.getRole().getDisplayName(), "role");
-        addDetailFieldWithIcon(formPanel, gbc, "Registration Date", currentUser.getRegistrationDate(), "calendar");
+        // Add non-editable fields with emoji icons
+        String roleEmoji = EmojiUtils.getUserRoleEmoji(currentUser.getRole().name());
+        addDetailFieldWithIcon(formPanel, gbc, "Role", currentUser.getRole().getDisplayName(), roleEmoji);
+        addDetailFieldWithIcon(formPanel, gbc, "Registration Date", currentUser.getRegistrationDate(), "📅");
 
         // Add status labels
         errorLabel = UIUtils.createLabel("", UIConstants.SMALL_FONT, AppColors.ERROR);
@@ -240,10 +252,10 @@ public class ProfilePanel extends JPanel {
         newPasswordField.setToolTipText("Enter a new password");
         confirmPasswordField.setToolTipText("Re-enter the new password");
 
-        // Add fields to panel
-        addEditableFieldWithIcon(formPanel, gbc, "Current Password", currentPasswordField, "lock");
-        addEditableFieldWithIcon(formPanel, gbc, "New Password", newPasswordField, "key");
-        addEditableFieldWithIcon(formPanel, gbc, "Confirm New Password", confirmPasswordField, "key");
+        // Add fields to panel with emoji icons
+        addEditableFieldWithIcon(formPanel, gbc, "Current Password", currentPasswordField, "🔒");
+        addEditableFieldWithIcon(formPanel, gbc, "New Password", newPasswordField, "🔑");
+        addEditableFieldWithIcon(formPanel, gbc, "Confirm New Password", confirmPasswordField, "🔑");
 
         // Password requirements
         JTextArea requirementsArea = new JTextArea(
@@ -261,8 +273,9 @@ public class ProfilePanel extends JPanel {
         gbc.insets = new Insets(10, 0, 10, 0);
         formPanel.add(requirementsArea, gbc);
 
-        // Change Password button
-        JButton changePasswordButton = UIUtils.createButton("Change Password", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
+        // Change Password button with emoji
+        JButton changePasswordButton = UIUtils.createButton("🔑 Change Password", null, UIUtils.ButtonType.PRIMARY, UIUtils.ButtonSize.NORMAL);
+        changePasswordButton.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
         changePasswordButton.addActionListener(e -> {
             // Only update password, not other fields
             String currentPassword = new String(currentPasswordField.getPassword());
@@ -303,14 +316,14 @@ public class ProfilePanel extends JPanel {
         return panel;
     }
 
-    private void addEditableFieldWithIcon(JPanel panel, GridBagConstraints gbc, String label, JComponent field, String iconName) {
+    private void addEditableFieldWithIcon(JPanel panel, GridBagConstraints gbc, String label, JComponent field, String emoji) {
         JPanel fieldPanel = new JPanel(new BorderLayout(10, 0));
         fieldPanel.setOpaque(false);
 
-        // Add icon
-        ImageIcon icon = IconUtils.loadIcon(iconName + ".png", IconUtils.ICON_SIZE_SMALL);
-        if (icon != null) {
-            JLabel iconLabel = new JLabel(icon);
+        // Add emoji icon
+        if (emoji != null) {
+            JLabel iconLabel = new JLabel(emoji);
+            iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
             fieldPanel.add(iconLabel, BorderLayout.WEST);
         }
 
@@ -322,14 +335,14 @@ public class ProfilePanel extends JPanel {
         panel.add(fieldPanel, gbc);
     }
 
-    private void addDetailFieldWithIcon(JPanel panel, GridBagConstraints gbc, String label, String value, String iconName) {
+    private void addDetailFieldWithIcon(JPanel panel, GridBagConstraints gbc, String label, String value, String emoji) {
         JPanel fieldPanel = new JPanel(new BorderLayout(10, 0));
         fieldPanel.setOpaque(false);
 
-        // Add icon
-        ImageIcon icon = IconUtils.loadIcon(iconName + ".png", IconUtils.ICON_SIZE_SMALL);
-        if (icon != null) {
-            JLabel iconLabel = new JLabel(icon);
+        // Add emoji icon
+        if (emoji != null) {
+            JLabel iconLabel = new JLabel(emoji);
+            iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
             fieldPanel.add(iconLabel, BorderLayout.WEST);
         }
 
@@ -347,13 +360,13 @@ public class ProfilePanel extends JPanel {
             // Save changes
             saveChanges();
             if (errorLabel.getText().isEmpty()) {
-                editButton.setText("Edit Profile");
+                editButton.setText("✏️ Edit Profile");
             } else {
                 return; // Don't exit edit mode if there are errors
             }
         } else {
             isEditing = true;
-            editButton.setText("Save Changes");
+            editButton.setText("💾 Save Changes");
             refreshUI();
         }
     }
