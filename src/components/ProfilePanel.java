@@ -260,9 +260,9 @@ public class ProfilePanel extends JPanel {
         // Password requirements
         JTextArea requirementsArea = new JTextArea(
             "Password Requirements:\n" +
-            "• Minimum 8 characters\n" +
-            "• At least one uppercase letter\n" +
-            "• At least one lowercase letter"
+            "• Minimum 8 characters.\n" +
+            "• At least one letter.\n" +
+            "• At least one digit."
         );
         requirementsArea.setEditable(false);
         requirementsArea.setBackground(new Color(0,0,0,0));
