@@ -147,7 +147,7 @@ public class SignupScreen extends JFrame {
         gbc.gridy = 0;
         formPanel.add(nameLabel, gbc);
 
-        nameField = UIUtils.createRoundedTextField();
+        nameField = new JTextField();
         nameField.setColumns(20);
         JPanel nameFieldPanel = EmojiUtils.createEmojiTextField("👤", nameField);
         gbc.gridy++;
@@ -158,7 +158,7 @@ public class SignupScreen extends JFrame {
         gbc.gridy++;
         formPanel.add(emailLabel, gbc);
 
-        emailField = UIUtils.createRoundedTextField();
+        emailField = new JTextField();
         emailField.setColumns(20);
         JPanel emailFieldPanel = EmojiUtils.createEmojiTextField("📧", emailField);
         gbc.gridy++;
@@ -169,7 +169,7 @@ public class SignupScreen extends JFrame {
         gbc.gridy++;
         formPanel.add(passwordLabel, gbc);
 
-        passwordField = UIUtils.createRoundedPasswordField();
+        passwordField = new JPasswordField();
         passwordField.setColumns(20);
         JPanel passwordFieldPanel = EmojiUtils.createEmojiPasswordField("🔒", passwordField);
         gbc.gridy++;
@@ -181,10 +181,10 @@ public class SignupScreen extends JFrame {
         formPanel.add(roleLabel, gbc);
 
         roleComboBox = new JComboBox<>(new String[]{
-            "🎯 Event Organizer",
-            "👤 Attendee"
+            "Event Organizer",
+            "Attendee"
         });
-        roleComboBox.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+        roleComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         roleComboBox.setBackground(Color.WHITE);
         roleComboBox.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(AppColors.BORDER),
@@ -308,7 +308,7 @@ public class SignupScreen extends JFrame {
         gbc.gridy++;
         formPanel.add(question1ComboPanel, gbc);
 
-        securityAnswer1Field = UIUtils.createRoundedTextField();
+        securityAnswer1Field = new JTextField();
         securityAnswer1Field.setColumns(20);
         JPanel answer1FieldPanel = EmojiUtils.createEmojiTextField("💬", securityAnswer1Field);
         gbc.gridy++;
@@ -325,7 +325,7 @@ public class SignupScreen extends JFrame {
         gbc.gridy++;
         formPanel.add(question2ComboPanel, gbc);
 
-        securityAnswer2Field = UIUtils.createRoundedTextField();
+        securityAnswer2Field = new JTextField();
         securityAnswer2Field.setColumns(20);
         JPanel answer2FieldPanel = EmojiUtils.createEmojiTextField("💬", securityAnswer2Field);
         gbc.gridy++;

@@ -251,7 +251,7 @@ public class EventDetailsScreen extends JFrame {
             }
 
             // Check if user is already registered
-            if (registrationController.isUserRegistered(currentUser.getId(), event.getId())) {
+            if (isRegistered) {
                 JOptionPane.showMessageDialog(this,
                     "You are already registered for this event.",
                     "Already Registered",
@@ -261,26 +261,24 @@ public class EventDetailsScreen extends JFrame {
 
             // Register the user
             Registration registration = registrationController.registerForEvent(currentUser, event.getId());
-
-            // Update UI
             isRegistered = true;
-            refreshUI();
 
             // Show success message
             JOptionPane.showMessageDialog(this,
-                "You have successfully registered for " + event.getTitle() + "!",
+                "Successfully registered for the event!",
                 "Registration Successful",
                 JOptionPane.INFORMATION_MESSAGE);
 
+            // Return to dashboard with refresh
+            dispose();
+            AttendeeDashboardNew dashboard = new AttendeeDashboardNew();
+            dashboard.setVisible(true);
+            dashboard.showScreen("My Events"); // This will trigger the refresh
+
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this,
-                "Error during registration: " + e.getMessage(),
-                "Registration Failed",
-                JOptionPane.ERROR_MESSAGE);
-        } catch (IllegalStateException e) {
-            JOptionPane.showMessageDialog(this,
-                e.getMessage(),
-                "Registration Failed",
+                "Error registering for event: " + e.getMessage(),
+                "Registration Error",
                 JOptionPane.ERROR_MESSAGE);
         }
     }

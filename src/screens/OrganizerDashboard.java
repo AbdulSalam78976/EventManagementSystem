@@ -57,6 +57,7 @@ import components.ParticipantsPanel;
 import components.ProfilePanel;
 import components.RoundedPanel;
 import components.SidebarPanel;
+import components.RecentEventItem;
 import controllers.AuthController;
 import controllers.EventController;
 import controllers.RegistrationController;
@@ -229,23 +230,16 @@ public class OrganizerDashboard extends JFrame {
         recentEventsTitle.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
         recentEventsPanel.add(recentEventsTitle, BorderLayout.NORTH);
 
-        // Recent Events Table (Placeholder/Existing table will be added here)
-        String[] columns = {"Event Name", "Date", "Location", "Status", "Participants"};
-        DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
-        table = new JTable(tableModel);
-        table.setFillsViewportHeight(true);
-        table.setRowHeight(30);
-        table.setFont(UIConstants.BODY_FONT);
-        table.getTableHeader().setFont(UIConstants.SMALL_FONT_BOLD);
-        table.getTableHeader().setBackground(AppColors.BACKGROUND_LIGHT);
-        table.getTableHeader().setForeground(AppColors.TEXT_SECONDARY);
-        table.setGridColor(AppColors.BORDER);
-        table.setSelectionBackground(AppColors.PRIMARY_LIGHT);
-        table.setSelectionForeground(AppColors.TEXT_PRIMARY);
+        // Create scrollable list panel for Recent Events
+        JPanel recentEventsListPanel = new JPanel();
+        recentEventsListPanel.setLayout(new BoxLayout(recentEventsListPanel, BoxLayout.Y_AXIS));
+        recentEventsListPanel.setOpaque(false);
 
-        JScrollPane tableScrollPane = new JScrollPane(table);
-        tableScrollPane.setBorder(BorderFactory.createEmptyBorder());
-        recentEventsPanel.add(tableScrollPane, BorderLayout.CENTER);
+        JScrollPane recentEventsScrollPane = new JScrollPane(recentEventsListPanel);
+        recentEventsScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        recentEventsScrollPane.setOpaque(false);
+        recentEventsScrollPane.getViewport().setOpaque(false);
+        recentEventsPanel.add(recentEventsScrollPane, BorderLayout.CENTER);
 
         // Main content layout: stats on top, recent events below
         mainContent.add(dashboardStatsPanel, BorderLayout.NORTH);
@@ -893,7 +887,7 @@ public class OrganizerDashboard extends JFrame {
      *
      * @param event The event to show details for
      */
-    private void showEventDetails(Event event) {
+    public void showEventDetails(Event event) {
         JDialog dialog = new JDialog(this, "Event Details", true);
         dialog.setSize(1000, 800);
         dialog.setLocationRelativeTo(this);
@@ -906,8 +900,8 @@ public class OrganizerDashboard extends JFrame {
                 dialog.dispose();
                 showEditEventDialog(event);
             },
-            null, // No approve button for organizer
-            null, // No reject button for organizer
+            null,
+            null,
             e -> dialog.dispose()
         );
         dialog.add(detailsPanel, BorderLayout.CENTER);
@@ -1043,209 +1037,88 @@ public class OrganizerDashboard extends JFrame {
     }
 
     private void loadRecentEvents() {
+        recentEventsPanel.removeAll();
+        // Re-add the title and View All link
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setOpaque(false);
+
+        JLabel titleLabel = UIUtils.createLabel(
+            "Recent Events",
+            UIConstants.BODY_FONT_BOLD,
+            AppColors.TEXT_PRIMARY
+        );
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
+        titlePanel.add(titleLabel, BorderLayout.WEST);
+
+        JLabel viewAllLabel = UIUtils.createLabel(
+            "View All Events →",
+            UIConstants.SMALL_FONT,
+            AppColors.PRIMARY
+        );
+        viewAllLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
+        viewAllLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        viewAllLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                contentLayout.show(contentPanel, "My Events");
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                viewAllLabel.setText("<html><u>View All Events →</u></html>");
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                viewAllLabel.setText("View All Events →");
+            }
+        });
+        titlePanel.add(viewAllLabel, BorderLayout.EAST);
+        recentEventsPanel.add(titlePanel, BorderLayout.NORTH);
+
+        // Create a new list panel to hold RecentEventItem components
+        JPanel recentEventsList = new JPanel();
+        recentEventsList.setLayout(new BoxLayout(recentEventsList, BoxLayout.Y_AXIS));
+        recentEventsList.setOpaque(false);
+
+        // Add scroll pane for the list
+        JScrollPane listScrollPane = new JScrollPane(recentEventsList);
+        listScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        listScrollPane.setOpaque(false);
+        listScrollPane.getViewport().setOpaque(false);
+
         try {
             User currentUser = authController.getCurrentUser();
-            List<Event> events = eventController.getEventsByOrganizer(currentUser.getId());
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
-            DateTimeFormatter deadlineFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+            if (currentUser != null) {
+                List<Event> recentEvents = eventController.getRecentEventsByOrganizer(currentUser.getId(), 5);
 
-            // Clear existing events
-            recentEventsPanel.removeAll();
-            recentEventsPanel.setLayout(new BoxLayout(recentEventsPanel, BoxLayout.Y_AXIS));
-
-            // Add title
-            JPanel titlePanel = new JPanel(new BorderLayout());
-            titlePanel.setOpaque(false);
-
-            JLabel titleLabel = UIUtils.createLabel(
-                "Recent Events",
-                UIConstants.BODY_FONT_BOLD,
-                AppColors.TEXT_PRIMARY
-            );
-            titleLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
-            titlePanel.add(titleLabel, BorderLayout.WEST);
-
-            JLabel viewAllLabel = UIUtils.createLabel(
-                "View All Events →",
-                UIConstants.SMALL_FONT,
-                AppColors.PRIMARY
-            );
-            viewAllLabel.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
-            viewAllLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            viewAllLabel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    contentLayout.show(contentPanel, "My Events");
-                }
-
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    viewAllLabel.setText("<html><u>View All Events →</u></html>");
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    viewAllLabel.setText("View All Events →");
-                }
-            });
-            titlePanel.add(viewAllLabel, BorderLayout.EAST);
-
-            recentEventsPanel.add(titlePanel);
-
-            // Add recent events (up to 5)
-            int count = 0;
-            for (Event event : events) {
-                if (count >= 5) break;
-
-                // Make the entire panel clickable to view event details
-                JPanel eventPanel = new JPanel(new BorderLayout(10, 0));
-                eventPanel.setBackground(Color.WHITE);
-                eventPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(AppColors.BORDER),
-                    BorderFactory.createEmptyBorder(10, 15, 10, 15)
-                ));
-                eventPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-                // Add click listener to the entire panel
-                eventPanel.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        showEventDetails(event);
+                if (recentEvents.isEmpty()) {
+                    JLabel noEventsLabel = UIUtils.createLabel(
+                        "No recent events to display.",
+                        UIConstants.BODY_FONT,
+                        AppColors.TEXT_SECONDARY
+                    );
+                    noEventsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                    noEventsLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
+                    recentEventsList.add(noEventsLabel);
+                } else {
+                    for (Event event : recentEvents) {
+                        RecentEventItem item = new RecentEventItem(event, e -> showEventDetails(event));
+                        recentEventsList.add(item);
+                        recentEventsList.add(Box.createVerticalStrut(10));
                     }
-
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        eventPanel.setBackground(new Color(245, 245, 250));
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        eventPanel.setBackground(Color.WHITE);
-                    }
-                });
-
-                // Event name and status
-                JPanel headerPanel = new JPanel(new BorderLayout());
-                headerPanel.setOpaque(false);
-
-                JLabel nameLabel = new JLabel(event.getTitle());
-                nameLabel.setFont(UIConstants.BODY_FONT_BOLD);
-                headerPanel.add(nameLabel, BorderLayout.WEST);
-
-                // Status badge
-                JLabel statusLabel = new JLabel(event.getStatus().name());
-                statusLabel.setFont(UIConstants.SMALL_FONT);
-                statusLabel.setForeground(Color.WHITE);
-                statusLabel.setOpaque(true);
-                statusLabel.setBackground(getStatusColor(event.getStatus()));
-                statusLabel.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-                headerPanel.add(statusLabel, BorderLayout.EAST);
-
-                eventPanel.add(headerPanel, BorderLayout.NORTH);
-
-                // Event details in a grid layout
-                JPanel detailsPanel = new JPanel(new GridLayout(3, 2, 10, 5));
-                detailsPanel.setOpaque(false);
-
-                // Date and time
-                JLabel dateIconLabel = new JLabel("\uD83D\uDCC5");
-                dateIconLabel.setFont(UIConstants.SMALL_FONT);
-                JLabel dateValueLabel = new JLabel(event.getEventDate().format(dateFormatter));
-                dateValueLabel.setFont(UIConstants.SMALL_FONT);
-
-                // Venue
-                JLabel venueIconLabel = new JLabel("📍");
-                venueIconLabel.setFont(UIConstants.SMALL_FONT);
-                JLabel venueValueLabel = new JLabel(event.getVenueName());
-                venueValueLabel.setFont(UIConstants.SMALL_FONT);
-
-                // Registration slots
-                JLabel slotsIconLabel = new JLabel("👥");
-                slotsIconLabel.setFont(UIConstants.SMALL_FONT);
-                JLabel slotsValueLabel = new JLabel(
-                    (event.getTotalSlots() - event.getAvailableSlots()) + " registered, " +
-                    event.getAvailableSlots() + " available"
-                );
-                slotsValueLabel.setFont(UIConstants.SMALL_FONT);
-
-                // Category
-                JLabel categoryIconLabel = new JLabel("🏷️");
-                categoryIconLabel.setFont(UIConstants.SMALL_FONT);
-                JLabel categoryValueLabel = new JLabel(event.getCategory());
-                categoryValueLabel.setFont(UIConstants.SMALL_FONT);
-
-                // Registration deadline
-                JLabel deadlineIconLabel = new JLabel("⏰");
-                deadlineIconLabel.setFont(UIConstants.SMALL_FONT);
-                JLabel deadlineValueLabel = new JLabel("Deadline: " + event.getRegistrationDeadline().format(deadlineFormatter));
-                deadlineValueLabel.setFont(UIConstants.SMALL_FONT);
-
-                // Add a short description
-                JLabel descIconLabel = new JLabel("📝");
-                descIconLabel.setFont(UIConstants.SMALL_FONT);
-
-                // Truncate description if too long
-                String description = event.getDescription();
-                if (description.length() > 50) {
-                    description = description.substring(0, 47) + "...";
                 }
-                JLabel descValueLabel = new JLabel(description);
-                descValueLabel.setFont(UIConstants.SMALL_FONT);
-
-                // Add all components to the details panel
-                detailsPanel.add(dateIconLabel);
-                detailsPanel.add(dateValueLabel);
-                detailsPanel.add(venueIconLabel);
-                detailsPanel.add(venueValueLabel);
-                detailsPanel.add(slotsIconLabel);
-                detailsPanel.add(slotsValueLabel);
-
-                // Create another panel for the second row of details
-                JPanel moreDetailsPanel = new JPanel(new GridLayout(3, 2, 10, 5));
-                moreDetailsPanel.setOpaque(false);
-
-                moreDetailsPanel.add(categoryIconLabel);
-                moreDetailsPanel.add(categoryValueLabel);
-                moreDetailsPanel.add(deadlineIconLabel);
-                moreDetailsPanel.add(deadlineValueLabel);
-                moreDetailsPanel.add(descIconLabel);
-                moreDetailsPanel.add(descValueLabel);
-
-                // Add both details panels to a container
-                JPanel allDetailsPanel = new JPanel(new BorderLayout(0, 10));
-                allDetailsPanel.setOpaque(false);
-                allDetailsPanel.add(detailsPanel, BorderLayout.NORTH);
-                allDetailsPanel.add(moreDetailsPanel, BorderLayout.CENTER);
-
-                // Add padding
-                allDetailsPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 5, 0));
-
-                eventPanel.add(allDetailsPanel, BorderLayout.CENTER);
-
-                recentEventsPanel.add(eventPanel);
-                recentEventsPanel.add(Box.createVerticalStrut(10));
-
-                count++;
             }
-
-            // If no events, show a message
-            if (count == 0) {
-                JLabel noEventsLabel = UIUtils.createLabel(
-                    "No events found. Click 'Create Event' to get started!",
-                    UIConstants.BODY_FONT,
-                    AppColors.TEXT_SECONDARY
-                );
-                noEventsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-                noEventsLabel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
-                recentEventsPanel.add(noEventsLabel);
-            }
-
-            recentEventsPanel.revalidate();
-            recentEventsPanel.repaint();
         } catch (SQLException e) {
             UIUtils.showError(this, "Error loading recent events: " + e.getMessage());
             e.printStackTrace();
         }
+
+        // Add the scroll pane to the recentEventsPanel CENTER position
+        recentEventsPanel.add(listScrollPane, BorderLayout.CENTER);
+
+        recentEventsPanel.revalidate();
+        recentEventsPanel.repaint();
     }
 
     private Color getStatusColor(EventStatus status) {

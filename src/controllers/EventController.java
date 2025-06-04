@@ -248,7 +248,24 @@ public class EventController {
      * @return List of events organized by the specified user
      */
     public List<Event> getEventsByOrganizer(int organizerId) throws SQLException {
-        return eventDAO.findByOrganizer(organizerId);
+        return eventDAO.findAll().stream()
+                .filter(event -> event.getOrganizer() != null && event.getOrganizer().getId() == organizerId)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get a specified number of most recent events by organizer.
+     *
+     * @param organizerId Organizer ID
+     * @param limit The maximum number of recent events to retrieve
+     * @return List of recent events organized by the specified user
+     */
+    public List<Event> getRecentEventsByOrganizer(int organizerId, int limit) throws SQLException {
+        return eventDAO.findAll().stream()
+                .filter(event -> event.getOrganizer() != null && event.getOrganizer().getId() == organizerId)
+                .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Sort by date descending
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 
     /**

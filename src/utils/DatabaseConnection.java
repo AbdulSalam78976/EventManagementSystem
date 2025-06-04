@@ -40,6 +40,7 @@ public class DatabaseConnection {
             } catch (Exception e) {
                 throw new SQLException("Error connecting to database: " + e.getMessage());
             }
+
         }
         return connection;
     }

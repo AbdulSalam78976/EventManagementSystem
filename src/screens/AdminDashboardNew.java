@@ -463,7 +463,7 @@ public class AdminDashboardNew extends JFrame {
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         filterPanel.setOpaque(false);
 
-        JTextField searchField = UIUtils.createRoundedTextField();
+        JTextField searchField = new JTextField();
         searchField.setPreferredSize(new Dimension(200, 30));
         searchField.setToolTipText("Search by event title");
 
@@ -607,7 +607,7 @@ public class AdminDashboardNew extends JFrame {
         }
     }
 
-    private void showEventDetails(Event event) {
+    public void showEventDetails(Event event) {
         JDialog dialog = new JDialog(this, "Event Details", true);
         dialog.setSize(1000, 800);
         dialog.setLocationRelativeTo(this);
@@ -739,8 +739,6 @@ public class AdminDashboardNew extends JFrame {
 
         return panel;
     }
-
-
 
     /**
      * Creates the settings panel

@@ -248,8 +248,9 @@ public class ForgotPasswordScreen extends JFrame {
 
         securityAnswer1Field = UIUtils.createRoundedTextField();
         securityAnswer1Field.setColumns(20);
+        JPanel answer1FieldPanel = EmojiUtils.createEmojiTextField("💬", securityAnswer1Field);
         gbc.gridy++;
-        formPanel.add(securityAnswer1Field, gbc);
+        formPanel.add(answer1FieldPanel, gbc);
 
         // Second security question
         JLabel question2Label = UIUtils.createLabel("Security Question 2:", UIConstants.BODY_FONT, AppColors.TEXT_PRIMARY);
@@ -262,8 +263,9 @@ public class ForgotPasswordScreen extends JFrame {
 
         securityAnswer2Field = UIUtils.createRoundedTextField();
         securityAnswer2Field.setColumns(20);
+        JPanel answer2FieldPanel = EmojiUtils.createEmojiTextField("💬", securityAnswer2Field);
         gbc.gridy++;
-        formPanel.add(securityAnswer2Field, gbc);
+        formPanel.add(answer2FieldPanel, gbc);
 
         // Error label
         errorLabel = UIUtils.createLabel(" ", UIConstants.SMALL_FONT, AppColors.ERROR);

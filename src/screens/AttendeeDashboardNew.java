@@ -224,7 +224,7 @@ public class AttendeeDashboardNew extends JFrame {
         try {
             User currentUser = AuthController.getInstance().getCurrentUser();
             List<Event> allEvents = eventController.getAllEvents();
-            List<Registration> myRegistrations = registrationController.getEventRegistrations(currentUser.getId());
+            List<Registration> myRegistrations = registrationController.getUserRegistrations(currentUser.getId());
 
             // Convert event data to calendar events
             List<CalendarPanel.CalendarEvent> calendarEvents = new ArrayList<>();
@@ -293,20 +293,44 @@ public class AttendeeDashboardNew extends JFrame {
 
         try {
             User currentUser = AuthController.getInstance().getCurrentUser();
-            List<Registration> myRegistrations = registrationController.getEventRegistrations(currentUser.getId());
+            List<Registration> myRegistrations = registrationController.getUserRegistrations(currentUser.getId());
+            List<Event> allUpcomingEvents = eventController.getUpcomingEvents();
 
             int totalRegistrations = myRegistrations.size();
-            int pendingRegistrations = (int) myRegistrations.stream()
+
+            // Filter registrations to find upcoming events that are not cancelled or rejected
+            int upcomingEvents = (int) myRegistrations.stream()
+                .filter(r -> {
+                    try {
+                        Event event = eventController.getEvent(r.getEvent().getId());
+                        return event != null &&
+                                (event.getEventDate().toLocalDate().isAfter(LocalDateTime.now().toLocalDate()) ||
+                                 (event.getEventDate().toLocalDate().isEqual(LocalDateTime.now().toLocalDate()) && event.getEventDate().isAfter(LocalDateTime.now()))) &&
+                                r.getStatus() != Registration.Status.CANCELLED &&
+                                r.getStatus() != Registration.Status.REJECTED;
+                    } catch (SQLException e) {
+                        return false;
+                    }
+                }).count();
+
+            int completedEvents = (int) myRegistrations.stream()
+                .filter(r -> {
+                    try {
+                        Event event = eventController.getEvent(r.getEvent().getId());
+                        return event != null && event.getEventDate().isBefore(LocalDateTime.now()) &&
+                               r.getStatus() != Registration.Status.CANCELLED &&
+                               r.getStatus() != Registration.Status.REJECTED;
+                    } catch (SQLException e) {
+                        return false;
+                    }
+                }).count();
+            int pendingApprovals = (int) myRegistrations.stream()
                 .filter(r -> r.getStatus() == Registration.Status.PENDING).count();
-            int approvedRegistrations = (int) myRegistrations.stream()
-                .filter(r -> r.getStatus() == Registration.Status.APPROVED).count();
-            int cancelledRegistrations = (int) myRegistrations.stream()
-                .filter(r -> r.getStatus() == Registration.Status.CANCELLED).count();
 
             statsPanel.add(createStatCard("TOTAL REGISTERED", String.valueOf(totalRegistrations), AppColors.PRIMARY));
-            statsPanel.add(createStatCard("PENDING", String.valueOf(pendingRegistrations), AppColors.WARNING));
-            statsPanel.add(createStatCard("APPROVED", String.valueOf(approvedRegistrations), AppColors.SUCCESS));
-            statsPanel.add(createStatCard("CANCELLED", String.valueOf(cancelledRegistrations), AppColors.ERROR));
+            statsPanel.add(createStatCard("UPCOMING EVENTS", String.valueOf(upcomingEvents), AppColors.ACCENT_GREEN));
+            statsPanel.add(createStatCard("COMPLETED EVENTS", String.valueOf(completedEvents), AppColors.ACCENT));
+            statsPanel.add(createStatCard("PENDING APPROVALS", String.valueOf(pendingApprovals), AppColors.WARNING));
         } catch (SQLException e) {
             UIUtils.showError(this, "Error loading registration statistics: " + e.getMessage());
         }
@@ -405,7 +429,7 @@ public class AttendeeDashboardNew extends JFrame {
                             String eventTitle = (String) eventsTable.getValueAt(row, 0);
                             // Find event by title
                             User currentUser = AuthController.getInstance().getCurrentUser();
-                            List<Registration> registrations = registrationController.getEventRegistrations(currentUser.getId());
+                            List<Registration> registrations = registrationController.getUserRegistrations(currentUser.getId());
                             for (Registration reg : registrations) {
                                 Event event = eventController.getEvent(reg.getEvent().getId());
                                 if (event != null && event.getTitle().equals(eventTitle)) {
@@ -428,7 +452,7 @@ public class AttendeeDashboardNew extends JFrame {
                             String eventTitle = (String) eventsTable.getValueAt(row, 0);
                             // Find registration by event title
                             User currentUser = AuthController.getInstance().getCurrentUser();
-                            List<Registration> registrations = registrationController.getEventRegistrations(currentUser.getId());
+                            List<Registration> registrations = registrationController.getUserRegistrations(currentUser.getId());
                             for (Registration reg : registrations) {
                                 Event event = eventController.getEvent(reg.getEvent().getId());
                                 if (event != null && event.getTitle().equals(eventTitle)) {
@@ -630,7 +654,7 @@ public class AttendeeDashboardNew extends JFrame {
     private void loadMyEventsData(DefaultTableModel tableModel) {
         try {
             User currentUser = AuthController.getInstance().getCurrentUser();
-            List<Registration> myRegistrations = registrationController.getEventRegistrations(currentUser.getId());
+            List<Registration> myRegistrations = registrationController.getUserRegistrations(currentUser.getId());
             DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
             DateTimeFormatter regDateFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm");
 
@@ -638,19 +662,23 @@ public class AttendeeDashboardNew extends JFrame {
             tableModel.setRowCount(0);
 
             for (Registration registration : myRegistrations) {
-                Event event = eventController.getEvent(registration.getEvent().getId());
-                if (event != null) {
-                    Object[] rowData = {
-                        event.getTitle(),
-                        event.getEventDate() != null ? event.getEventDate().format(dateFormat) : "N/A",
-                        event.getVenueName(),
-                        event.getStatus().toString(),
-                        registration.getStatus().toString(),
-                        registration.getRegistrationDate() != null ?
-                            registration.getRegistrationDate().format(regDateFormat) : "N/A",
-                        "Actions"
-                    };
-                    tableModel.addRow(rowData);
+                try {
+                    Event event = eventController.getEvent(registration.getEvent().getId());
+                    if (event != null) {
+                        Object[] rowData = {
+                            event.getTitle(),
+                            event.getEventDate() != null ? event.getEventDate().format(dateFormat) : "N/A",
+                            event.getVenueName() != null ? event.getVenueName() : "N/A",
+                            event.getStatus() != null ? event.getStatus().toString() : "N/A",
+                            registration.getStatus() != null ? registration.getStatus().toString() : "N/A",
+                            registration.getRegistrationDate() != null ?
+                                registration.getRegistrationDate().format(regDateFormat) : "N/A",
+                            "Actions"
+                        };
+                        tableModel.addRow(rowData);
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Error loading event for registration: " + e.getMessage());
                 }
             }
         } catch (SQLException e) {
@@ -662,7 +690,7 @@ public class AttendeeDashboardNew extends JFrame {
     private void filterMyEvents(DefaultTableModel tableModel, String searchText, String selectedStatus) {
         try {
             User currentUser = AuthController.getInstance().getCurrentUser();
-            List<Registration> myRegistrations = registrationController.getEventRegistrations(currentUser.getId());
+            List<Registration> myRegistrations = registrationController.getUserRegistrations(currentUser.getId());
             DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy");
             DateTimeFormatter regDateFormat = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm");
 
@@ -736,18 +764,29 @@ public class AttendeeDashboardNew extends JFrame {
 
     // Helper method to show event details dialog
     private void showEventDetailsDialog(Event event) {
-        JDialog dialog = new JDialog(this, "Event Details", true);
-        dialog.setSize(700, 600);
-        dialog.setLocationRelativeTo(this);
-        dialog.setLayout(new BorderLayout());
-        dialog.add(new components.EventDetailsPanel(event), BorderLayout.CENTER);
+        try {
+            // Fetch the latest event data
+            Event latestEvent = eventController.getEvent(event.getId());
+            if (latestEvent == null) {
+                UIUtils.showError(this, "Error loading event details: Event not found.");
+                return;
+            }
 
-        JButton closeBtn = UIUtils.createButton("Close", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
-        closeBtn.addActionListener(ev -> dialog.dispose());
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnPanel.add(closeBtn);
-        dialog.add(btnPanel, BorderLayout.SOUTH);
-        dialog.setVisible(true);
+            JDialog dialog = new JDialog(this, "Event Details", true);
+            dialog.setSize(700, 600);
+            dialog.setLocationRelativeTo(this);
+            dialog.setLayout(new BorderLayout());
+            dialog.add(new components.EventDetailsPanel(latestEvent), BorderLayout.CENTER);
+
+            JButton closeBtn = UIUtils.createButton("Close", null, UIUtils.ButtonType.SECONDARY, UIUtils.ButtonSize.NORMAL);
+            closeBtn.addActionListener(ev -> dialog.dispose());
+            JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            btnPanel.add(closeBtn);
+            dialog.add(btnPanel, BorderLayout.SOUTH);
+            dialog.setVisible(true);
+        } catch (SQLException ex) {
+            UIUtils.showError(this, "Error loading event details: " + ex.getMessage());
+        }
     }
 
     // Helper method to create stat cards
@@ -932,25 +971,33 @@ public class AttendeeDashboardNew extends JFrame {
 
         try {
             User currentUser = AuthController.getInstance().getCurrentUser();
-            List<Registration> myRegistrations = registrationController.getEventRegistrations(currentUser.getId());
+            List<Registration> myRegistrations = registrationController.getUserRegistrations(currentUser.getId());
+            List<Event> allUpcomingEvents = eventController.getUpcomingEvents();
 
             int totalRegistrations = myRegistrations.size();
+
+            // Filter registrations to find upcoming events that are not cancelled or rejected
             int upcomingEvents = (int) myRegistrations.stream()
                 .filter(r -> {
                     try {
                         Event event = eventController.getEvent(r.getEvent().getId());
-                        return event != null && event.getEventDate().isAfter(LocalDateTime.now()) &&
-                               r.getStatus() == Registration.Status.APPROVED;
+                        return event != null &&
+                                (event.getEventDate().toLocalDate().isAfter(LocalDateTime.now().toLocalDate()) ||
+                                 (event.getEventDate().toLocalDate().isEqual(LocalDateTime.now().toLocalDate()) && event.getEventDate().isAfter(LocalDateTime.now()))) &&
+                                r.getStatus() != Registration.Status.CANCELLED &&
+                                r.getStatus() != Registration.Status.REJECTED;
                     } catch (SQLException e) {
                         return false;
                     }
                 }).count();
+
             int completedEvents = (int) myRegistrations.stream()
                 .filter(r -> {
                     try {
                         Event event = eventController.getEvent(r.getEvent().getId());
                         return event != null && event.getEventDate().isBefore(LocalDateTime.now()) &&
-                               r.getStatus() == Registration.Status.APPROVED;
+                               r.getStatus() != Registration.Status.CANCELLED &&
+                               r.getStatus() != Registration.Status.REJECTED;
                     } catch (SQLException e) {
                         return false;
                     }
@@ -1128,7 +1175,7 @@ public class AttendeeDashboardNew extends JFrame {
         try {
             List<Event> allEvents = eventController.getUpcomingEvents();
             User user = AuthController.getInstance().getCurrentUser();
-            List<Registration> regs = registrationController.getEventRegistrations(user.getId());
+            List<Registration> regs = registrationController.getUserRegistrations(user.getId());
             Set<Integer> registeredEventIds = regs.stream().map(r -> r.getEvent().getId()).collect(Collectors.toSet());
 
             List<Event> availableEvents = allEvents.stream()
@@ -1207,14 +1254,12 @@ public class AttendeeDashboardNew extends JFrame {
         venueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Register button
-        JButton registerBtn = new JButton("Register");
-        registerBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        registerBtn.setForeground(Color.WHITE);
-        registerBtn.setBackground(new Color(74, 144, 226));
-        registerBtn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        registerBtn.setFocusPainted(false);
-        registerBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        registerBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JButton registerBtn = UIUtils.createButton(
+            "Register",
+            null,
+            UIUtils.ButtonType.PRIMARY,
+            UIUtils.ButtonSize.SMALL
+        );
         registerBtn.addActionListener(e -> {
             try {
                 User user = AuthController.getInstance().getCurrentUser();
@@ -1227,13 +1272,30 @@ public class AttendeeDashboardNew extends JFrame {
             }
         });
 
+        // View Details button
+        JButton viewDetailsBtn = UIUtils.createButton(
+            "View Details",
+            null,
+            UIUtils.ButtonType.SECONDARY,
+            UIUtils.ButtonSize.SMALL
+        );
+        viewDetailsBtn.addActionListener(e -> {
+            showEventDetailsDialog(event);
+        });
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(viewDetailsBtn);
+        buttonPanel.add(registerBtn);
+
         content.add(titleLabel);
         content.add(Box.createVerticalStrut(8));
         content.add(dateLabel);
         content.add(Box.createVerticalStrut(4));
         content.add(venueLabel);
         content.add(Box.createVerticalStrut(15));
-        content.add(registerBtn);
+        content.add(buttonPanel);
 
         card.add(content, BorderLayout.CENTER);
         return card;
@@ -1270,7 +1332,7 @@ public class AttendeeDashboardNew extends JFrame {
 
         try {
             User currentUser = AuthController.getInstance().getCurrentUser();
-            List<Registration> recentRegistrations = registrationController.getEventRegistrations(currentUser.getId())
+            List<Registration> recentRegistrations = registrationController.getUserRegistrations(currentUser.getId())
                 .stream()
                 .sorted((r1, r2) -> r2.getRegistrationDate().compareTo(r1.getRegistrationDate()))
                 .limit(5)
@@ -1284,15 +1346,24 @@ public class AttendeeDashboardNew extends JFrame {
                 activityPanel.add(emptyLabel);
             } else {
                 for (Registration reg : recentRegistrations) {
-                    Event event = eventController.getEvent(reg.getEvent().getId());
-                    if (event != null) {
-                        activityPanel.add(createActivityItem(reg, event));
-                        activityPanel.add(Box.createVerticalStrut(10));
+                    try {
+                        Event event = eventController.getEvent(reg.getEvent().getId());
+                        if (event != null) {
+                            activityPanel.add(createActivityItem(reg, event));
+                            activityPanel.add(Box.createVerticalStrut(10));
+                        }
+                    } catch (SQLException e) {
+                        System.err.println("Error loading event for registration: " + e.getMessage());
                     }
                 }
             }
         } catch (SQLException e) {
             System.err.println("Error loading recent activity: " + e.getMessage());
+            JLabel errorLabel = new JLabel("Error loading activity data");
+            errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            errorLabel.setForeground(AppColors.ERROR);
+            errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            activityPanel.add(errorLabel);
         }
 
         section.add(activityPanel, BorderLayout.CENTER);
@@ -1408,14 +1479,24 @@ public class AttendeeDashboardNew extends JFrame {
     }
 
     // Ensure proper disposal of screens when navigating between screens
-    private void showScreen(String cardName) {
-        // Dispose of the current visible JFrame if it's not this
-        Window[] windows = Window.getWindows();
-        for (Window w : windows) {
-            if (w instanceof JFrame && w != this && w.isVisible()) {
-                w.dispose();
-            }
-        }
+    public void showScreen(String cardName) {
         contentLayout.show(contentPanel, cardName);
+        if (cardName.equals("My Events")) {
+            refreshDashboard();
+        }
+    }
+
+    private void refreshDashboard() {
+        try {
+            // Refresh the My Events content
+            JPanel myEventsContent = createMyEventsContent();
+            contentPanel.removeAll();
+            contentPanel.add(createDashboardContent(), "Dashboard");
+            contentPanel.add(myEventsContent, "My Events");
+            contentPanel.add(new ProfilePanel(AuthController.getInstance().getCurrentUser(), true), "Profile");
+            contentLayout.show(contentPanel, "My Events");
+        } catch (SQLException e) {
+            UIUtils.showError(this, "Error refreshing dashboard: " + e.getMessage());
+        }
     }
 }
