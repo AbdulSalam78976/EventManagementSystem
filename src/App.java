@@ -1,7 +1,8 @@
+import java.sql.SQLException;
+
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-import javax.swing.JOptionPane;
-import java.sql.SQLException;
 
 import screens.LoginScreen;
 import utils.NetworkUtils;
@@ -10,6 +11,7 @@ import utils.NetworkUtils;
  * Main entry point for the Event Management System
  */
 public class App {
+    @SuppressWarnings("UseSpecificCatch")
     public static void main(String[] args) {
         // Check internet connection
         if (!NetworkUtils.isInternetAvailable()) {
